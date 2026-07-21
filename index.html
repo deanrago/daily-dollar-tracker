@@ -103,13 +103,13 @@
   .subhead .rule { flex: 1; height: 1px; background: var(--edge); max-width: 60px; }
 
   .gear {
-    position: absolute; top: -2px; right: 0;
-    width: 34px; height: 34px; border-radius: 50%;
-    background: rgba(42,20,32,0.28); border: none; color: #2a1420;
-    font-size: 16px; cursor: pointer; z-index: 2;
-    display: grid; place-items: center;
+    display: block; margin: 12px auto 0;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.05); border: 1px solid var(--edge);
+    color: var(--muted); font-size: 15px; cursor: pointer;
+    line-height: 1; padding: 0;
   }
-  .gear:active { background: rgba(42,20,32,0.45); }
+  .gear:active { background: rgba(255,255,255,0.11); color: var(--cream); }
 
   /* ---------- card ---------- */
   .card {
@@ -188,14 +188,34 @@
   }
   .entry {
     display: flex; justify-content: space-between; align-items: center;
+    gap: 12px;
     padding: 11px 2px; border-bottom: 1px solid var(--edge);
     font-variant-numeric: tabular-nums; font-size: 17px;
   }
   .entry:last-child { border-bottom: none; }
+  .entry .name {
+    flex: 1; min-width: 0; font-size: 15.5px; color: var(--cream);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .entry .name.unnamed { color: var(--muted); font-style: italic; }
+  .entry .amt { font-weight: 500; }
   .entry .neg { color: var(--teal); }
   .entry .del {
     background: none; border: none; color: var(--muted);
     font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1;
+  }
+
+  /* quick-pick category chips in the add sheet */
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
+  .chips button {
+    padding: 7px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--edge); background: rgba(255,255,255,0.04);
+    color: var(--muted); font-family: "Outfit", sans-serif; font-size: 13px;
+  }
+  .chips button.on { background: var(--sun); border-color: var(--sun); color: #2a1420; font-weight: 500; }
+
+  .modal input.name-field {
+    font-size: 16px; text-align: left; padding: 13px 15px; margin-top: 11px;
   }
   .empty-note { color: var(--muted); font-size: 14px; padding: 10px 2px; font-style: italic; }
 
@@ -253,8 +273,7 @@
 
   <header>
     <div class="sun-badge"><h1>Daily Dollar</h1></div>
-    <button class="gear" id="goalBtn" aria-label="Change daily goal">&#9881;</button>
-    <div class="subhead"><span class="rule"></span><span id="tagline">Two of us, one budget</span><span class="rule"></span></div>
+    <div class="subhead"><span class="rule"></span><span id="tagline">Dean, Kyle, Cleo and the Nodomoeter</span><span class="rule"></span></div>
   </header>
 
   <div class="card">
@@ -275,6 +294,7 @@
   </div>
 
   <div class="status" id="status"><span class="pip"></span><span id="statusText">connecting</span></div>
+  <button class="gear" id="goalBtn" aria-label="Change daily goal">&#9881;</button>
 
 </div>
 
@@ -283,6 +303,8 @@
     <h3>Add spend</h3>
     <p>Negative amounts undo a mistake — try <b>-12</b>.</p>
     <input type="text" inputmode="decimal" id="addInput" placeholder="0.00" autocomplete="off">
+    <input type="text" class="name-field" id="nameInput" placeholder="What was it? (optional)" autocomplete="off">
+    <div class="chips" id="chips"></div>
     <div class="row">
       <button class="btn-cancel" data-close>Cancel</button>
       <button class="btn-ok" id="addSave">Add</button>
@@ -309,6 +331,11 @@
   var SUPA_KEY = 'sb_publishable_R90eTho_4YY01IR0xApDnQ_Id_ujq95';
   var CACHE = 'dailyDollar.cache';
   var MAX_WEEKS = 30, MIN_WEEKS = 10;
+  var CATEGORIES = ['Groceries', 'Eating out', 'Coffee', 'Gas', 'Cleo', 'Van', 'Fun', 'Bills'];
+
+  // The `label` column may not exist yet — detected on first pull so the app
+  // keeps working either way.
+  var hasLabel = true;
 
   // ---- state -------------------------------------------------------------
   // entries: [{id, day, amount}] — id is the Supabase row id, or a local "L…" string
@@ -366,16 +393,20 @@
   }
 
   function pull() {
+    var cols = hasLabel ? 'id,day,amount,label' : 'id,day,amount';
     return Promise.all([
-      api('entries?select=id,day,amount&order=id.asc'),
+      api('entries?select=' + cols + '&order=id.asc'),
       api('settings?select=goal&id=eq.1')
     ]).then(function (res) {
       state.entries = res[0].map(function (e) {
-        return { id: e.id, day: e.day, amount: Number(e.amount) };
+        return { id: e.id, day: e.day, amount: Number(e.amount), label: e.label || '' };
       });
       if (res[1] && res[1][0]) state.goal = Number(res[1][0].goal);
       setOnline(true); saveCache(); render();
-    }).catch(function () { setOnline(false); render(); });
+    }).catch(function (err) {
+      if (hasLabel) { hasLabel = false; return pull(); }   // column not added yet
+      setOnline(false); render();
+    });
   }
 
   function setOnline(v) {
@@ -464,28 +495,38 @@
     list.forEach(function (e) {
       var row = document.createElement('div');
       row.className = 'entry';
-      var span = document.createElement('span');
-      span.textContent = money(e.amount);
-      if (e.amount < 0) span.className = 'neg';
+
+      var name = document.createElement('span');
+      name.className = 'name' + (e.label ? '' : ' unnamed');
+      name.textContent = e.label || 'unnamed';
+
+      var amt = document.createElement('span');
+      amt.className = 'amt' + (e.amount < 0 ? ' neg' : '');
+      amt.textContent = money(e.amount);
+
       var del = document.createElement('button');
       del.className = 'del'; del.textContent = '×';
       del.setAttribute('aria-label', 'Delete entry');
       del.onclick = function () { removeEntry(e); };
-      row.appendChild(span); row.appendChild(del);
+
+      row.appendChild(name); row.appendChild(amt); row.appendChild(del);
       box.appendChild(row);
     });
   }
 
   // ---- mutations (optimistic, then sync) ---------------------------------
-  function addEntry(amount) {
-    var tmp = { id: 'L' + Date.now() + Math.random(), day: selected, amount: amount };
+  function addEntry(amount, label) {
+    var tmp = { id: 'L' + Date.now() + Math.random(), day: selected, amount: amount, label: label };
     state.entries.push(tmp);
     saveCache(); render();
+
+    var body = { day: tmp.day, amount: tmp.amount };
+    if (hasLabel && label) body.label = label;
 
     api('entries', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ day: tmp.day, amount: tmp.amount })
+      body: JSON.stringify(body)
     }).then(function (rows) {
       if (rows && rows[0]) tmp.id = rows[0].id;       // swap in the real id
       setOnline(true); saveCache();
@@ -526,15 +567,40 @@
     bd.onclick = function (ev) { if (ev.target === bd) bd.classList.remove('open'); };
   });
 
-  document.getElementById('addBtn').onclick = function () { open('addModal'); };
+  // quick-pick chips: tap to fill the name, tap again to clear
+  var chipBox = document.getElementById('chips');
+  CATEGORIES.forEach(function (c) {
+    var b = document.createElement('button');
+    b.textContent = c;
+    b.onclick = function () {
+      var inp = document.getElementById('nameInput');
+      inp.value = (inp.value === c) ? '' : c;
+      syncChips();
+    };
+    chipBox.appendChild(b);
+  });
+  function syncChips() {
+    var v = document.getElementById('nameInput').value.trim();
+    Array.prototype.forEach.call(chipBox.children, function (b) {
+      b.classList.toggle('on', b.textContent === v);
+    });
+  }
+  document.getElementById('nameInput').oninput = syncChips;
+
+  document.getElementById('addBtn').onclick = function () {
+    document.getElementById('nameInput').value = '';
+    syncChips();
+    open('addModal');
+  };
   function openGoal() { open('goalModal', state.goal); }
   document.getElementById('goalBtn').onclick = openGoal;
   document.getElementById('goalChip').onclick = openGoal;
 
   function commitAdd() {
     var v = parseFloat(document.getElementById('addInput').value);
+    var label = document.getElementById('nameInput').value.trim().slice(0, 60);
     close('addModal');
-    if (!isNaN(v) && v !== 0) addEntry(v);
+    if (!isNaN(v) && v !== 0) addEntry(v, label);
   }
   function commitGoal() {
     var v = parseFloat(document.getElementById('goalInput').value);
@@ -544,6 +610,7 @@
   document.getElementById('addSave').onclick = commitAdd;
   document.getElementById('goalSave').onclick = commitGoal;
   document.getElementById('addInput').onkeydown = function (e) { if (e.key === 'Enter') commitAdd(); };
+  document.getElementById('nameInput').onkeydown = function (e) { if (e.key === 'Enter') commitAdd(); };
   document.getElementById('goalInput').onkeydown = function (e) { if (e.key === 'Enter') commitGoal(); };
 
   document.getElementById('grid').onclick = function (e) {
