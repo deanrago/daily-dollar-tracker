@@ -3,147 +3,283 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0d0d0f">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>Daily Dollar</title>
+
+<meta name="theme-color" content="#1b1424">
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Daily Dollar">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..800,50,1&family=Outfit:wght@300..700&display=swap" rel="stylesheet">
+
 <style>
   :root {
-    --bg: #0d0d0f;
-    --card: #16161a;
-    --edge: #232329;
-    --text: #f2f2f4;
-    --muted: #8a8a94;
-    --empty: #26262c;
-    --good: #34d17f;
-    --good-dim: #1b3d2b;
-    --bad: #ff5c5c;
-    --bad-dim: #3d1f1f;
+    /* dusk over the canyon */
+    --bg:        #1b1424;
+    --bg-2:      #241a30;
+    --card:      #271d34;
+    --edge:      #3b2e4c;
+
+    --cream:     #f7eee1;
+    --muted:     #a294b4;
+
+    /* 70s park poster */
+    --sun:       #f2a541;
+    --clay:      #d9633f;
+    --rose:      #e2879b;
+    --sage:      #8cb86a;
+    --pine:      #6aa85f;
+    --teal:      #4f9a95;
+
+    --good:      #8cb86a;
+    --bad:       #d9543f;
+    --hollow:    #4a3d5c;
   }
+
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--bg); }
   body {
     margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    min-height: 100vh;
+    color: var(--cream);
+    font: 400 16px/1.45 "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+    background:
+      radial-gradient(120% 60% at 50% 0%, #3a2440 0%, rgba(58,36,64,0) 62%),
+      var(--bg);
+    background-attachment: fixed;
+    overscroll-behavior-y: none;
   }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 40px; }
 
-  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-  h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
-  h1 span { color: var(--good); }
-  .icon-btn {
-    background: none; border: none; color: var(--muted); font-size: 22px;
-    cursor: pointer; padding: 6px; line-height: 1;
+  .wrap {
+    max-width: 520px;
+    margin: 0 auto;
+    padding:
+      calc(env(safe-area-inset-top) + 18px) 18px
+      calc(env(safe-area-inset-bottom) + 32px);
   }
-  .icon-btn:active { color: var(--text); }
 
-  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 16px; padding: 16px; }
+  /* ---------- header: the sun over the ridge ---------- */
+  header { position: relative; text-align: center; margin-bottom: 20px; }
 
-  /* dot field */
-  .grid-scroll { overflow-x: auto; scrollbar-width: none; }
-  .grid-scroll::-webkit-scrollbar { display: none; }
+  .sun-badge {
+    width: 100%; height: 62px; position: relative; overflow: hidden;
+    border-radius: 999px 999px 8px 8px;
+    background: linear-gradient(180deg, var(--sun) 0%, var(--clay) 55%, var(--rose) 100%);
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  /* the pale rings of a 70s poster sun */
+  .sun-badge::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      180deg,
+      rgba(255,242,225,0.00) 0px, rgba(255,242,225,0.00) 9px,
+      rgba(255,242,225,0.22) 9px, rgba(255,242,225,0.22) 12px);
+  }
+  .sun-badge h1 {
+    position: relative;
+    margin: 0 0 9px;
+    font-family: "Fraunces", Georgia, serif;
+    font-variation-settings: "SOFT" 50, "WONK" 1, "opsz" 100;
+    font-weight: 700;
+    font-size: 27px;
+    letter-spacing: -0.015em;
+    color: #2a1420;
+  }
+
+  .subhead {
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    margin-top: 11px; font-size: 11.5px; letter-spacing: 0.19em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .subhead .rule { flex: 1; height: 1px; background: var(--edge); max-width: 60px; }
+
+  .gear {
+    position: absolute; top: -2px; right: 0;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(42,20,32,0.28); border: none; color: #2a1420;
+    font-size: 16px; cursor: pointer; z-index: 2;
+    display: grid; place-items: center;
+  }
+  .gear:active { background: rgba(42,20,32,0.45); }
+
+  /* ---------- card ---------- */
+  .card {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--edge);
+    border-radius: 22px;
+    padding: 20px 18px 24px;
+    box-shadow: 0 14px 34px rgba(0,0,0,0.32);
+  }
+
+  /* ---------- the dot field ---------- */
   .grid {
     display: grid;
     grid-auto-flow: column;
-    grid-template-rows: repeat(7, 1fr);
-    gap: 4px;
-    width: max-content;
-    margin: 0 auto;
+    grid-template-rows: repeat(7, var(--dot, 14px));
+    gap: var(--gap, 5px);
+    justify-content: center;
+    margin: 2px 0 4px;
   }
   .dot {
-    width: 13px; height: 13px; border-radius: 4px;
-    background: var(--empty);
-    border: none; padding: 0; cursor: pointer;
+    width: var(--dot, 14px); height: var(--dot, 14px);
+    border-radius: 4px;
+    padding: 0; cursor: pointer;
+    background: transparent;
+    border: 1.5px solid var(--hollow);      /* logged nothing = hollow */
+    transition: transform 0.08s ease;
   }
-  .dot.good { background: var(--good); }
-  .dot.bad  { background: var(--bad); }
-  .dot.past-empty { background: var(--good-dim); }
-  .dot.future { background: #1a1a1f; }
-  .dot.today { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--text); }
-  .dot.sel   { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--muted); }
+  .dot.good   { background: var(--good); border-color: var(--good); }
+  .dot.bad    { background: var(--bad);  border-color: var(--bad); }
+  .dot.future { border-color: rgba(74,61,92,0.45); }
+  .dot.today  { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3.5px var(--sun); }
+  .dot.sel    { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3.5px var(--muted); }
+  .dot:active { transform: scale(0.86); }
 
-  /* today panel */
-  .today { text-align: center; margin-top: 22px; }
-  .today .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
-  .today .amount { font-size: 52px; font-weight: 700; letter-spacing: -0.03em; margin: 6px 0 2px; }
-  .today .amount.over { color: var(--bad); }
-  .today .amount.under { color: var(--good); }
-  .today .goal { font-size: 14px; color: var(--muted); }
+  /* ---------- today readout ---------- */
+  .readout { text-align: center; margin-top: 24px; }
+  .readout .day {
+    font-size: 11.5px; letter-spacing: 0.19em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .readout .amount {
+    font-family: "Fraunces", Georgia, serif;
+    font-variation-settings: "SOFT" 50, "WONK" 1, "opsz" 144;
+    font-weight: 600;
+    font-size: 58px; line-height: 1.05;
+    letter-spacing: -0.035em;
+    margin: 8px 0 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .amount.under { color: var(--sage); }
+  .amount.over  { color: var(--bad); }
+  .amount.zero  { color: var(--cream); }
+
+  .goal-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 13px; border-radius: 999px;
+    border: 1px solid var(--edge); background: rgba(255,255,255,0.03);
+    font-size: 12.5px; color: var(--muted); cursor: pointer;
+  }
+  .goal-chip b { color: var(--cream); font-weight: 500; }
 
   .add {
-    display: block; width: 68px; height: 68px; margin: 24px auto 0;
-    border-radius: 50%; border: none; background: var(--good); color: #06170e;
-    font-size: 38px; font-weight: 300; line-height: 1; cursor: pointer;
+    display: block; width: 66px; height: 66px; margin: 26px auto 0;
+    border-radius: 50%; border: none; cursor: pointer;
+    background: linear-gradient(160deg, var(--sun) 0%, var(--clay) 100%);
+    color: #2a1420; font-size: 34px; font-weight: 300; line-height: 1;
+    box-shadow: 0 7px 18px rgba(217,99,63,0.34);
   }
-  .add:active { transform: scale(0.94); }
+  .add:active { transform: scale(0.93); }
 
-  .entries { margin-top: 24px; }
-  .entries h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+  /* ---------- entries ---------- */
+  .entries { margin-top: 26px; }
+  .entries h2 {
+    font-size: 11.5px; letter-spacing: 0.19em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500; margin: 0 0 6px;
+  }
   .entry {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 0; border-bottom: 1px solid var(--edge); font-variant-numeric: tabular-nums;
+    padding: 11px 2px; border-bottom: 1px solid var(--edge);
+    font-variant-numeric: tabular-nums; font-size: 17px;
   }
   .entry:last-child { border-bottom: none; }
-  .entry .del { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 0 4px; }
-  .empty-note { color: var(--muted); font-size: 14px; padding: 8px 0; }
+  .entry .neg { color: var(--teal); }
+  .entry .del {
+    background: none; border: none; color: var(--muted);
+    font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1;
+  }
+  .empty-note { color: var(--muted); font-size: 14px; padding: 10px 2px; font-style: italic; }
 
-  /* modal */
+  /* ---------- sync status ---------- */
+  .status {
+    text-align: center; margin-top: 20px;
+    font-size: 11px; letter-spacing: 0.13em; text-transform: uppercase;
+    color: var(--muted); opacity: 0.65;
+  }
+  .status .pip {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--sage); margin-right: 6px; vertical-align: middle;
+  }
+  .status.local .pip { background: var(--sun); }
+
+  /* ---------- modals ---------- */
   .backdrop {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
-    display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10;
+    position: fixed; inset: 0; background: rgba(14,8,20,0.72);
+    backdrop-filter: blur(3px);
+    display: none; align-items: center; justify-content: center;
+    padding: 22px; z-index: 20;
   }
   .backdrop.open { display: flex; }
-  .modal { background: var(--card); border: 1px solid var(--edge); border-radius: 18px; padding: 22px; width: 100%; max-width: 340px; }
-  .modal h3 { margin: 0 0 4px; font-size: 18px; }
+  .modal {
+    width: 100%; max-width: 330px;
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--edge); border-radius: 22px; padding: 24px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  }
+  .modal h3 {
+    margin: 0 0 5px; font-size: 20px;
+    font-family: "Fraunces", Georgia, serif;
+    font-variation-settings: "SOFT" 50, "WONK" 1;
+    font-weight: 600; letter-spacing: -0.02em;
+  }
   .modal p { margin: 0 0 16px; font-size: 13px; color: var(--muted); }
   .modal input {
-    width: 100%; padding: 14px; font-size: 26px; text-align: center;
-    background: var(--bg); border: 1px solid var(--edge); border-radius: 12px;
-    color: var(--text); font-variant-numeric: tabular-nums;
+    width: 100%; padding: 15px; border-radius: 14px;
+    background: rgba(0,0,0,0.26); border: 1px solid var(--edge);
+    color: var(--cream); font-size: 27px; text-align: center;
+    font-family: "Outfit", sans-serif; font-variant-numeric: tabular-nums;
   }
-  .modal input:focus { outline: none; border-color: var(--good); }
+  .modal input:focus { outline: none; border-color: var(--sun); }
   .row { display: flex; gap: 10px; margin-top: 16px; }
-  .row button { flex: 1; padding: 13px; border-radius: 12px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; }
-  .btn-cancel { background: var(--edge); color: var(--text); }
-  .btn-ok { background: var(--good); color: #06170e; }
+  .row button {
+    flex: 1; padding: 13px; border-radius: 14px; border: none;
+    font-family: "Outfit", sans-serif; font-size: 15px; font-weight: 500; cursor: pointer;
+  }
+  .btn-cancel { background: rgba(255,255,255,0.07); color: var(--cream); }
+  .btn-ok { background: linear-gradient(160deg, var(--sun), var(--clay)); color: #2a1420; font-weight: 600; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header>
-    <h1>Daily <span>Dollar</span></h1>
-    <button class="icon-btn" id="goalBtn" title="Change daily goal">&#9881;</button>
+    <div class="sun-badge"><h1>Daily Dollar</h1></div>
+    <button class="gear" id="goalBtn" aria-label="Change daily goal">&#9881;</button>
+    <div class="subhead"><span class="rule"></span><span id="tagline">Two of us, one budget</span><span class="rule"></span></div>
   </header>
 
   <div class="card">
-    <div class="grid-scroll" id="gridScroll">
-      <div class="grid" id="grid"></div>
+    <div class="grid" id="grid"></div>
+
+    <div class="readout">
+      <div class="day" id="dayLabel">Today</div>
+      <div class="amount zero" id="amount">$0</div>
+      <button class="goal-chip" id="goalChip">daily goal <b id="goalVal">$200</b></button>
     </div>
 
-    <div class="today">
-      <div class="label" id="dayLabel">Today</div>
-      <div class="amount" id="amount">$0</div>
-      <div class="goal" id="goalLabel">goal $200</div>
-    </div>
-
-    <button class="add" id="addBtn">+</button>
+    <button class="add" id="addBtn" aria-label="Add spend">+</button>
   </div>
 
   <div class="entries">
-    <h2 id="entriesTitle">Today's entries</h2>
+    <h2 id="entriesTitle">Today</h2>
     <div id="entryList"></div>
   </div>
+
+  <div class="status" id="status"><span class="pip"></span><span id="statusText">connecting</span></div>
 
 </div>
 
 <div class="backdrop" id="addModal">
   <div class="modal">
     <h3>Add spend</h3>
-    <p>Use a negative number to undo a mistake.</p>
-    <input type="text" inputmode="decimal" id="addInput" placeholder="0.00">
+    <p>Negative amounts undo a mistake — try <b>-12</b>.</p>
+    <input type="text" inputmode="decimal" id="addInput" placeholder="0.00" autocomplete="off">
     <div class="row">
       <button class="btn-cancel" data-close>Cancel</button>
       <button class="btn-ok" id="addSave">Add</button>
@@ -155,7 +291,7 @@
   <div class="modal">
     <h3>Daily goal</h3>
     <p>Days at or under this stay green.</p>
-    <input type="text" inputmode="decimal" id="goalInput">
+    <input type="text" inputmode="decimal" id="goalInput" autocomplete="off">
     <div class="row">
       <button class="btn-cancel" data-close>Cancel</button>
       <button class="btn-ok" id="goalSave">Save</button>
@@ -165,21 +301,26 @@
 
 <script>
 (function () {
-  var WEEKS = 26;                 // how many weeks the dot field shows
-  var KEY = 'dailyDollar.v1';
+  // ---- config ------------------------------------------------------------
+  var SUPA_URL = 'https://sdafxhthxtafqtzaltaf.supabase.co';
+  var SUPA_KEY = 'sb_publishable_R90eTho_4YY01IR0xApDnQ_Id_ujq95';
+  var CACHE = 'dailyDollar.cache';
+  var MAX_WEEKS = 30, MIN_WEEKS = 10;
 
   // ---- state -------------------------------------------------------------
-  var state = load();
-  var selected = todayKey();      // which day the panel below is showing
+  // entries: [{id, day, amount}] — id is the Supabase row id, or a local "L…" string
+  var state = loadCache();
+  var selected = todayKey();
+  var online = false;
 
-  function load() {
+  function loadCache() {
     try {
-      var raw = JSON.parse(localStorage.getItem(KEY));
-      if (raw && raw.days) return raw;
+      var r = JSON.parse(localStorage.getItem(CACHE));
+      if (r && Array.isArray(r.entries)) return r;
     } catch (e) {}
-    return { goal: 200, days: {} };   // days: { "2026-07-20": [12.5, -3] }
+    return { goal: 200, entries: [] };
   }
-  function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
+  function saveCache() { localStorage.setItem(CACHE, JSON.stringify(state)); }
 
   // ---- dates -------------------------------------------------------------
   function keyOf(d) {
@@ -188,100 +329,181 @@
            String(d.getDate()).padStart(2, '0');
   }
   function todayKey() { return keyOf(new Date()); }
+  function prettyDate(k) {
+    var p = k.split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2])
+      .toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
 
+  function entriesFor(k) {
+    return state.entries.filter(function (e) { return e.day === k; });
+  }
   function totalFor(k) {
-    var list = state.days[k];
-    if (!list) return null;                       // null = nothing logged
-    return list.reduce(function (a, b) { return a + b; }, 0);
+    var list = entriesFor(k);
+    if (!list.length) return null;                    // null = never logged
+    return list.reduce(function (a, e) { return a + Number(e.amount); }, 0);
   }
   function money(n) {
     var s = Math.abs(n).toFixed(2).replace(/\.00$/, '');
-    return (n < 0 ? '-$' : '$') + s;
+    return (n < 0 ? '−$' : '$') + s;
   }
 
-  // ---- dot field ---------------------------------------------------------
-  // Columns are weeks (Sun-Sat), rows are days of the week, oldest on the left.
+  // ---- supabase (plain REST — no SDK) -------------------------------------
+  function api(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json'
+    }, opts.headers || {});
+    return fetch(SUPA_URL + '/rest/v1/' + path, opts).then(function (r) {
+      if (!r.ok) throw new Error(r.status + ' ' + path);
+      return r.status === 204 ? null : r.json();
+    });
+  }
+
+  function pull() {
+    return Promise.all([
+      api('entries?select=id,day,amount&order=id.asc'),
+      api('settings?select=goal&id=eq.1')
+    ]).then(function (res) {
+      state.entries = res[0].map(function (e) {
+        return { id: e.id, day: e.day, amount: Number(e.amount) };
+      });
+      if (res[1] && res[1][0]) state.goal = Number(res[1][0].goal);
+      setOnline(true); saveCache(); render();
+    }).catch(function () { setOnline(false); render(); });
+  }
+
+  function setOnline(v) {
+    online = v;
+    var el = document.getElementById('status');
+    el.className = 'status' + (v ? '' : ' local');
+    document.getElementById('statusText').textContent =
+      v ? 'synced' : 'this device only';
+  }
+
+  // ---- the dot field -----------------------------------------------------
+  // Columns are weeks, rows are days of the week (Sun at top). The grid always
+  // ends on the current week, and we render only as many weeks as fit — so the
+  // right-hand column is today's week, flush with the card edge. No scrolling.
+  function weeksThatFit() {
+    var card = document.querySelector('.card');
+    var inner = card.clientWidth - 36;                // card horizontal padding
+    var dot = 14, gap = 5;
+    var n = Math.floor((inner + gap) / (dot + gap));
+    if (n < MIN_WEEKS) {                              // very narrow: shrink the dots
+      dot = Math.max(9, Math.floor((inner + gap) / MIN_WEEKS) - gap);
+      n = MIN_WEEKS;
+    }
+    document.documentElement.style.setProperty('--dot', dot + 'px');
+    document.documentElement.style.setProperty('--gap', gap + 'px');
+    return Math.min(n, MAX_WEEKS);
+  }
+
   function buildGrid() {
     var grid = document.getElementById('grid');
+    var weeks = weeksThatFit();
     grid.innerHTML = '';
 
     var today = new Date(); today.setHours(0, 0, 0, 0);
     var start = new Date(today);
-    start.setDate(start.getDate() - today.getDay());        // Sunday of this week
-    start.setDate(start.getDate() - (WEEKS - 1) * 7);       // back to first column
+    start.setDate(start.getDate() - today.getDay());       // Sunday of this week
+    start.setDate(start.getDate() - (weeks - 1) * 7);      // first column
 
     var tKey = todayKey();
-    for (var i = 0; i < WEEKS * 7; i++) {
-      var d = new Date(start);
-      d.setDate(start.getDate() + i);
+    var frag = document.createDocumentFragment();
+
+    for (var i = 0; i < weeks * 7; i++) {
+      var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
       var k = keyOf(d);
       var total = totalFor(k);
 
       var b = document.createElement('button');
-      b.className = 'dot';
+      var cls = 'dot';
+      if (d > today)          cls += ' future';            // hollow, extra faint
+      else if (total !== null) cls += (total > state.goal ? ' bad' : ' good');
+      // else: past with nothing logged — stays hollow grey
+
+      if (k === tKey)        cls += ' today';
+      else if (k === selected) cls += ' sel';
+
+      b.className = cls;
       b.dataset.key = k;
-      b.title = k;
-
-      if (d > today) {
-        b.className += ' future';
-      } else if (total === null) {
-        b.className += ' past-empty';                       // nothing spent = still under goal
-      } else {
-        b.className += total > state.goal ? ' bad' : ' good';
-      }
-      if (k === tKey) b.className += ' today';
-      else if (k === selected) b.className += ' sel';
-
-      grid.appendChild(b);
+      b.setAttribute('aria-label', k);
+      frag.appendChild(b);
     }
-    // keep the newest weeks in view on narrow screens
-    var sc = document.getElementById('gridScroll');
-    sc.scrollLeft = sc.scrollWidth;
+    grid.appendChild(frag);
   }
 
-  // ---- panel + entry list ------------------------------------------------
+  // ---- render ------------------------------------------------------------
   function render() {
     buildGrid();
 
-    var total = totalFor(selected) || 0;
+    var total = totalFor(selected);
     var amt = document.getElementById('amount');
-    amt.textContent = money(total);
-    amt.className = 'amount ' + (total > state.goal ? 'over' : 'under');
+    amt.textContent = money(total || 0);
+    amt.className = 'amount ' +
+      (total === null ? 'zero' : total > state.goal ? 'over' : 'under');
 
     var isToday = selected === todayKey();
     document.getElementById('dayLabel').textContent = isToday ? 'Today' : prettyDate(selected);
-    document.getElementById('goalLabel').textContent = 'goal ' + money(state.goal);
-    document.getElementById('entriesTitle').textContent =
-      (isToday ? "Today's" : prettyDate(selected) + "'s") + ' entries';
+    document.getElementById('goalVal').textContent = money(state.goal);
+    document.getElementById('entriesTitle').textContent = isToday ? 'Today' : prettyDate(selected);
 
-    var list = state.days[selected] || [];
+    var list = entriesFor(selected);
     var box = document.getElementById('entryList');
     box.innerHTML = '';
     if (!list.length) {
       box.innerHTML = '<div class="empty-note">Nothing logged yet.</div>';
       return;
     }
-    list.forEach(function (v, idx) {
+    list.forEach(function (e) {
       var row = document.createElement('div');
       row.className = 'entry';
-      row.innerHTML = '<span>' + money(v) + '</span>';
+      var span = document.createElement('span');
+      span.textContent = money(e.amount);
+      if (e.amount < 0) span.className = 'neg';
       var del = document.createElement('button');
-      del.className = 'del';
-      del.textContent = '×';
-      del.onclick = function () {
-        state.days[selected].splice(idx, 1);
-        if (!state.days[selected].length) delete state.days[selected];
-        save(); render();
-      };
-      row.appendChild(del);
+      del.className = 'del'; del.textContent = '×';
+      del.setAttribute('aria-label', 'Delete entry');
+      del.onclick = function () { removeEntry(e); };
+      row.appendChild(span); row.appendChild(del);
       box.appendChild(row);
     });
   }
 
-  function prettyDate(k) {
-    var p = k.split('-');
-    var d = new Date(+p[0], +p[1] - 1, +p[2]);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  // ---- mutations (optimistic, then sync) ---------------------------------
+  function addEntry(amount) {
+    var tmp = { id: 'L' + Date.now() + Math.random(), day: selected, amount: amount };
+    state.entries.push(tmp);
+    saveCache(); render();
+
+    api('entries', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ day: tmp.day, amount: tmp.amount })
+    }).then(function (rows) {
+      if (rows && rows[0]) tmp.id = rows[0].id;       // swap in the real id
+      setOnline(true); saveCache();
+    }).catch(function () { setOnline(false); });
+  }
+
+  function removeEntry(e) {
+    state.entries = state.entries.filter(function (x) { return x !== e; });
+    saveCache(); render();
+    if (typeof e.id === 'number') {
+      api('entries?id=eq.' + e.id, { method: 'DELETE' })
+        .then(function () { setOnline(true); })
+        .catch(function () { setOnline(false); });
+    }
+  }
+
+  function setGoal(v) {
+    state.goal = v; saveCache(); render();
+    api('settings?id=eq.1', { method: 'PATCH', body: JSON.stringify({ goal: v }) })
+      .then(function () { setOnline(true); })
+      .catch(function () { setOnline(false); });
   }
 
   // ---- modals ------------------------------------------------------------
@@ -290,7 +512,7 @@
     m.classList.add('open');
     var inp = m.querySelector('input');
     inp.value = prefill === undefined ? '' : prefill;
-    setTimeout(function () { inp.focus(); inp.select(); }, 50);
+    setTimeout(function () { inp.focus(); inp.select(); }, 60);
   }
   function close(id) { document.getElementById(id).classList.remove('open'); }
 
@@ -298,33 +520,29 @@
     b.onclick = function () { b.closest('.backdrop').classList.remove('open'); };
   });
   document.querySelectorAll('.backdrop').forEach(function (bd) {
-    bd.onclick = function (e) { if (e.target === bd) bd.classList.remove('open'); };
+    bd.onclick = function (ev) { if (ev.target === bd) bd.classList.remove('open'); };
   });
 
   document.getElementById('addBtn').onclick = function () { open('addModal'); };
-  document.getElementById('goalBtn').onclick = function () { open('goalModal', state.goal); };
+  function openGoal() { open('goalModal', state.goal); }
+  document.getElementById('goalBtn').onclick = openGoal;
+  document.getElementById('goalChip').onclick = openGoal;
 
   function commitAdd() {
     var v = parseFloat(document.getElementById('addInput').value);
-    if (!isNaN(v) && v !== 0) {
-      if (!state.days[selected]) state.days[selected] = [];
-      state.days[selected].push(v);
-      save();
-    }
-    close('addModal'); render();
+    close('addModal');
+    if (!isNaN(v) && v !== 0) addEntry(v);
   }
   function commitGoal() {
     var v = parseFloat(document.getElementById('goalInput').value);
-    if (!isNaN(v) && v > 0) { state.goal = v; save(); }
-    close('goalModal'); render();
+    close('goalModal');
+    if (!isNaN(v) && v > 0) setGoal(v);
   }
-
   document.getElementById('addSave').onclick = commitAdd;
   document.getElementById('goalSave').onclick = commitGoal;
   document.getElementById('addInput').onkeydown = function (e) { if (e.key === 'Enter') commitAdd(); };
   document.getElementById('goalInput').onkeydown = function (e) { if (e.key === 'Enter') commitGoal(); };
 
-  // tap a dot to inspect / edit that day
   document.getElementById('grid').onclick = function (e) {
     var dot = e.target.closest('.dot');
     if (!dot || dot.classList.contains('future')) return;
@@ -332,7 +550,13 @@
     render();
   };
 
+  // ---- keep the two phones in step ---------------------------------------
+  window.addEventListener('resize', render);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) pull(); });
+  setInterval(function () { if (!document.hidden) pull(); }, 20000);
+
   render();
+  pull();
 })();
 </script>
 </body>
