@@ -26,3 +26,8 @@ insert into categories (name, fixed, sort) values
   ('Netflix',                      true,  17),
   ('HBO',                          true,  18)
 on conflict (name) do nothing;
+
+-- entries carry their own copy of the name + committed flag, so re-tagging a
+-- category later never rewrites history
+alter table entries add column if not exists label text;
+alter table entries add column if not exists fixed boolean not null default false;
