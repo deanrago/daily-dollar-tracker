@@ -231,6 +231,24 @@
   }
   .status.local .pip { background: var(--sun); }
 
+  /* ---------- pull to refresh ---------- */
+  .ptr {
+    position: fixed; left: 0; right: 0;
+    top: calc(env(safe-area-inset-top) + 6px);
+    display: flex; justify-content: center;
+    pointer-events: none; z-index: 5; opacity: 0;
+  }
+  .ptr .ring {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 2px solid var(--edge); border-top-color: var(--sun);
+    background: var(--bg-2);
+  }
+  .ptr.spin .ring { animation: ptrspin 0.7s linear infinite; }
+  @keyframes ptrspin { to { transform: rotate(360deg); } }
+
+  .wrap { transition: transform 0.22s cubic-bezier(.2,.8,.3,1); }
+  .wrap.dragging { transition: none; }
+
   /* ---------- modals ---------- */
   .backdrop {
     position: fixed; inset: 0; background: rgba(14,8,20,0.72);
@@ -269,7 +287,8 @@
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="ptr" id="ptr"><div class="ring"></div></div>
+<div class="wrap" id="wrap">
 
   <header>
     <div class="sun-badge"><h1>Daily Dollar</h1></div>
@@ -619,6 +638,70 @@
     selected = dot.dataset.key;
     render();
   };
+
+  // ---- pull to refresh ---------------------------------------------------
+  // There's no address bar in the home-screen app, so this is the only way to
+  // force a sync by hand.
+  (function () {
+    var wrap = document.getElementById('wrap');
+    var ptr  = document.getElementById('ptr');
+    var TRIGGER = 62, MAX = 92;
+    var startY = 0, dist = 0, tracking = false, busy = false;
+
+    function move(d) {
+      dist = d;
+      wrap.style.transform = 'translateY(' + d + 'px)';
+      ptr.style.transform  = 'translateY(' + (d * 0.55) + 'px) rotate(' + (d * 3.4) + 'deg)';
+      ptr.style.opacity    = Math.min(1, d / TRIGGER);
+    }
+    function reset() {
+      wrap.classList.remove('dragging');
+      wrap.style.transform = '';
+      ptr.style.transform = '';
+      ptr.style.opacity = '';
+      ptr.classList.remove('spin');
+      dist = 0;
+    }
+
+    document.addEventListener('touchstart', function (e) {
+      if (busy || e.touches.length !== 1) return;
+      if (window.scrollY > 0) return;                         // only from the top
+      if (document.querySelector('.backdrop.open')) return;   // not while a sheet is up
+      startY = e.touches[0].clientY;
+      tracking = true;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function (e) {
+      if (!tracking) return;
+      var dy = e.touches[0].clientY - startY;
+      if (dy <= 0) { if (dist) { reset(); } tracking = false; return; }
+      e.preventDefault();                                     // hold the page still
+      wrap.classList.add('dragging');
+      move(Math.min(MAX, dy * 0.5));                          // rubber-band feel
+    }, { passive: false });
+
+    document.addEventListener('touchend', function () {
+      if (!tracking) return;
+      tracking = false;
+      if (dist < TRIGGER) { reset(); return; }
+
+      busy = true;
+      wrap.classList.remove('dragging');
+      wrap.style.transform = 'translateY(46px)';
+      ptr.style.transform = 'translateY(26px)';
+      ptr.style.opacity = '1';
+      ptr.classList.add('spin');
+
+      var done = false;
+      function finish() { if (done) return; done = true; reset(); busy = false; }
+
+      Promise.all([
+        pull().catch(function () {}),
+        new Promise(function (r) { setTimeout(r, 500); })      // let the spin register
+      ]).then(finish);
+      setTimeout(finish, 4000);                                // never stick spinning
+    }, { passive: true });
+  })();
 
   // ---- keep the two phones in step ---------------------------------------
   window.addEventListener('resize', render);
