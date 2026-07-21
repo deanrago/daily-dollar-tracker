@@ -213,6 +213,17 @@
     color: var(--muted); font-family: "Outfit", sans-serif; font-size: 13px;
   }
   .chips button.on { background: var(--sun); border-color: var(--sun); color: #2a1420; font-weight: 500; }
+  .chips button.chip-add  { border-style: dashed; color: var(--sage); }
+  .chips button.chip-edit { color: var(--muted); opacity: 0.8; }
+  .chips button.chip-edit.on { background: rgba(255,255,255,0.12); color: var(--cream); }
+  .chips button.removable {
+    border-color: var(--bad); color: var(--bad);
+    padding-right: 26px; position: relative;
+  }
+  .chips button.removable::after {
+    content: "×"; position: absolute; right: 9px; top: 50%;
+    transform: translateY(-52%); font-size: 15px;
+  }
 
   .modal input.name-field {
     font-size: 16px; text-align: left; padding: 13px 15px; margin-top: 11px;
@@ -331,6 +342,18 @@
   </div>
 </div>
 
+<div class="backdrop" id="catModal">
+  <div class="modal">
+    <h3>New category</h3>
+    <p>It'll show up as a quick-pick for both of you.</p>
+    <input type="text" class="name-field" id="catInput" placeholder="e.g. Laundry" autocomplete="off">
+    <div class="row">
+      <button class="btn-cancel" data-close>Cancel</button>
+      <button class="btn-ok" id="catSave">Add</button>
+    </div>
+  </div>
+</div>
+
 <div class="backdrop" id="goalModal">
   <div class="modal">
     <h3>Daily goal</h3>
@@ -350,11 +373,20 @@
   var SUPA_KEY = 'sb_publishable_R90eTho_4YY01IR0xApDnQ_Id_ujq95';
   var CACHE = 'dailyDollar.cache';
   var MAX_WEEKS = 30, MIN_WEEKS = 10;
-  var CATEGORIES = ['Groceries', 'Eating out', 'Coffee', 'Gas', 'Cleo', 'Van', 'Fun', 'Bills'];
+  // Used only until the categories table answers (or if it doesn't exist yet).
+  var DEFAULT_CATEGORIES = [
+    { id: 'd1', name: 'Gas' },
+    { id: 'd2', name: 'Campsite' },
+    { id: 'd3', name: 'Grocery Food or Beverage' },
+    { id: 'd4', name: 'Non-Grocery Food or Beverage' },
+    { id: 'd5', name: 'Uber' },
+    { id: 'd6', name: 'Cleo' }
+  ];
 
-  // The `label` column may not exist yet — detected on first pull so the app
-  // keeps working either way.
-  var hasLabel = true;
+  // The `label` column / `categories` table may not exist yet — both are
+  // detected on first pull so the app keeps working either way.
+  var hasLabel = true, hasCategories = true;
+  var editingChips = false;
 
   // ---- state -------------------------------------------------------------
   // entries: [{id, day, amount}] — id is the Supabase row id, or a local "L…" string
@@ -367,7 +399,7 @@
       var r = JSON.parse(localStorage.getItem(CACHE));
       if (r && Array.isArray(r.entries)) return r;
     } catch (e) {}
-    return { goal: 200, entries: [] };
+    return { goal: 200, entries: [], categories: DEFAULT_CATEGORIES.slice() };
   }
   function saveCache() { localStorage.setItem(CACHE, JSON.stringify(state)); }
 
@@ -422,10 +454,22 @@
       });
       if (res[1] && res[1][0]) state.goal = Number(res[1][0].goal);
       setOnline(true); saveCache(); render();
-    }).catch(function (err) {
+    }).catch(function () {
       if (hasLabel) { hasLabel = false; return pull(); }   // column not added yet
       setOnline(false); render();
-    });
+    }).then(pullCategories);
+  }
+
+  function pullCategories() {
+    if (!hasCategories) return;
+    return api('categories?select=id,name,fixed&order=sort.asc,id.asc')
+      .then(function (rows) {
+        state.categories = rows.map(function (c) {
+          return { id: c.id, name: c.name, fixed: !!c.fixed };
+        });
+        saveCache(); renderChips();
+      })
+      .catch(function () { hasCategories = false; });      // table not created yet
   }
 
   function setOnline(v) {
@@ -586,30 +630,87 @@
     bd.onclick = function (ev) { if (ev.target === bd) bd.classList.remove('open'); };
   });
 
-  // quick-pick chips: tap to fill the name, tap again to clear
+  // ---- quick-pick chips --------------------------------------------------
+  // Tap to fill the name, tap again to clear. The pencil toggles edit mode,
+  // where tapping a chip deletes it instead.
   var chipBox = document.getElementById('chips');
-  CATEGORIES.forEach(function (c) {
-    var b = document.createElement('button');
-    b.textContent = c;
-    b.onclick = function () {
-      var inp = document.getElementById('nameInput');
-      inp.value = (inp.value === c) ? '' : c;
-      syncChips();
-    };
-    chipBox.appendChild(b);
-  });
-  function syncChips() {
-    var v = document.getElementById('nameInput').value.trim();
-    Array.prototype.forEach.call(chipBox.children, function (b) {
-      b.classList.toggle('on', b.textContent === v);
+  var nameInput = document.getElementById('nameInput');
+
+  function renderChips() {
+    chipBox.innerHTML = '';
+    var cur = nameInput.value.trim();
+
+    state.categories.forEach(function (c) {
+      var b = document.createElement('button');
+      b.textContent = c.name;
+      b.className = (!editingChips && c.name === cur) ? 'on' : '';
+      if (editingChips) b.classList.add('removable');
+      b.onclick = function () {
+        if (editingChips) { deleteCategory(c); return; }
+        nameInput.value = (nameInput.value === c.name) ? '' : c.name;
+        renderChips();
+      };
+      chipBox.appendChild(b);
     });
+
+    var add = document.createElement('button');
+    add.className = 'chip-add';
+    add.textContent = '+ New';
+    add.onclick = function () { open('catModal'); };
+    chipBox.appendChild(add);
+
+    var edit = document.createElement('button');
+    edit.className = 'chip-edit' + (editingChips ? ' on' : '');
+    edit.textContent = editingChips ? 'Done' : 'Edit';
+    edit.onclick = function () { editingChips = !editingChips; renderChips(); };
+    chipBox.appendChild(edit);
   }
-  document.getElementById('nameInput').oninput = syncChips;
+
+  function addCategory(name) {
+    name = name.trim().slice(0, 40);
+    if (!name) return;
+    if (state.categories.some(function (c) { return c.name.toLowerCase() === name.toLowerCase(); })) return;
+
+    var tmp = { id: 'L' + Date.now(), name: name, fixed: false };
+    state.categories.push(tmp);
+    saveCache(); renderChips();
+
+    if (!hasCategories) return;
+    api('categories', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ name: name, sort: 99 })
+    }).then(function (rows) {
+      if (rows && rows[0]) tmp.id = rows[0].id;
+      saveCache();
+    }).catch(function () { setOnline(false); });
+  }
+
+  function deleteCategory(c) {
+    state.categories = state.categories.filter(function (x) { return x !== c; });
+    saveCache(); renderChips();
+    if (hasCategories && typeof c.id === 'number') {
+      api('categories?id=eq.' + c.id, { method: 'DELETE' })
+        .catch(function () { setOnline(false); });
+    }
+  }
+
+  nameInput.oninput = function () { if (!editingChips) renderChips(); };
 
   document.getElementById('addBtn').onclick = function () {
-    document.getElementById('nameInput').value = '';
-    syncChips();
+    nameInput.value = '';
+    editingChips = false;
+    renderChips();
     open('addModal');
+  };
+
+  document.getElementById('catSave').onclick = function () {
+    var v = document.getElementById('catInput').value;
+    close('catModal');
+    addCategory(v);
+  };
+  document.getElementById('catInput').onkeydown = function (e) {
+    if (e.key === 'Enter') document.getElementById('catSave').click();
   };
   function openGoal() { open('goalModal', state.goal); }
   document.getElementById('goalBtn').onclick = openGoal;
@@ -708,6 +809,7 @@
   document.addEventListener('visibilitychange', function () { if (!document.hidden) pull(); });
   setInterval(function () { if (!document.hidden) pull(); }, 20000);
 
+  renderChips();
   render();
   pull();
 })();
