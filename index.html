@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0d0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Daily Dollar</title>
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --card: #16161a;
+    --edge: #232329;
+    --text: #f2f2f4;
+    --muted: #8a8a94;
+    --empty: #26262c;
+    --good: #34d17f;
+    --good-dim: #1b3d2b;
+    --bad: #ff5c5c;
+    --bad-dim: #3d1f1f;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 40px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+  h1 span { color: var(--good); }
+  .icon-btn {
+    background: none; border: none; color: var(--muted); font-size: 22px;
+    cursor: pointer; padding: 6px; line-height: 1;
+  }
+  .icon-btn:active { color: var(--text); }
+
+  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 16px; padding: 16px; }
+
+  /* dot field */
+  .grid-scroll { overflow-x: auto; scrollbar-width: none; }
+  .grid-scroll::-webkit-scrollbar { display: none; }
+  .grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(7, 1fr);
+    gap: 4px;
+    width: max-content;
+    margin: 0 auto;
+  }
+  .dot {
+    width: 13px; height: 13px; border-radius: 4px;
+    background: var(--empty);
+    border: none; padding: 0; cursor: pointer;
+  }
+  .dot.good { background: var(--good); }
+  .dot.bad  { background: var(--bad); }
+  .dot.past-empty { background: var(--good-dim); }
+  .dot.future { background: #1a1a1f; }
+  .dot.today { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--text); }
+  .dot.sel   { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--muted); }
+
+  /* today panel */
+  .today { text-align: center; margin-top: 22px; }
+  .today .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
+  .today .amount { font-size: 52px; font-weight: 700; letter-spacing: -0.03em; margin: 6px 0 2px; }
+  .today .amount.over { color: var(--bad); }
+  .today .amount.under { color: var(--good); }
+  .today .goal { font-size: 14px; color: var(--muted); }
+
+  .add {
+    display: block; width: 68px; height: 68px; margin: 24px auto 0;
+    border-radius: 50%; border: none; background: var(--good); color: #06170e;
+    font-size: 38px; font-weight: 300; line-height: 1; cursor: pointer;
+  }
+  .add:active { transform: scale(0.94); }
+
+  .entries { margin-top: 24px; }
+  .entries h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+  .entry {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--edge); font-variant-numeric: tabular-nums;
+  }
+  .entry:last-child { border-bottom: none; }
+  .entry .del { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 0 4px; }
+  .empty-note { color: var(--muted); font-size: 14px; padding: 8px 0; }
+
+  /* modal */
+  .backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+    display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10;
+  }
+  .backdrop.open { display: flex; }
+  .modal { background: var(--card); border: 1px solid var(--edge); border-radius: 18px; padding: 22px; width: 100%; max-width: 340px; }
+  .modal h3 { margin: 0 0 4px; font-size: 18px; }
+  .modal p { margin: 0 0 16px; font-size: 13px; color: var(--muted); }
+  .modal input {
+    width: 100%; padding: 14px; font-size: 26px; text-align: center;
+    background: var(--bg); border: 1px solid var(--edge); border-radius: 12px;
+    color: var(--text); font-variant-numeric: tabular-nums;
+  }
+  .modal input:focus { outline: none; border-color: var(--good); }
+  .row { display: flex; gap: 10px; margin-top: 16px; }
+  .row button { flex: 1; padding: 13px; border-radius: 12px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .btn-cancel { background: var(--edge); color: var(--text); }
+  .btn-ok { background: var(--good); color: #06170e; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Daily <span>Dollar</span></h1>
+    <button class="icon-btn" id="goalBtn" title="Change daily goal">&#9881;</button>
+  </header>
+
+  <div class="card">
+    <div class="grid-scroll" id="gridScroll">
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="today">
+      <div class="label" id="dayLabel">Today</div>
+      <div class="amount" id="amount">$0</div>
+      <div class="goal" id="goalLabel">goal $200</div>
+    </div>
+
+    <button class="add" id="addBtn">+</button>
+  </div>
+
+  <div class="entries">
+    <h2 id="entriesTitle">Today's entries</h2>
+    <div id="entryList"></div>
+  </div>
+
+</div>
+
+<div class="backdrop" id="addModal">
+  <div class="modal">
+    <h3>Add spend</h3>
+    <p>Use a negative number to undo a mistake.</p>
+    <input type="text" inputmode="decimal" id="addInput" placeholder="0.00">
+    <div class="row">
+      <button class="btn-cancel" data-close>Cancel</button>
+      <button class="btn-ok" id="addSave">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="backdrop" id="goalModal">
+  <div class="modal">
+    <h3>Daily goal</h3>
+    <p>Days at or under this stay green.</p>
+    <input type="text" inputmode="decimal" id="goalInput">
+    <div class="row">
+      <button class="btn-cancel" data-close>Cancel</button>
+      <button class="btn-ok" id="goalSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var WEEKS = 26;                 // how many weeks the dot field shows
+  var KEY = 'dailyDollar.v1';
+
+  // ---- state -------------------------------------------------------------
+  var state = load();
+  var selected = todayKey();      // which day the panel below is showing
+
+  function load() {
+    try {
+      var raw = JSON.parse(localStorage.getItem(KEY));
+      if (raw && raw.days) return raw;
+    } catch (e) {}
+    return { goal: 200, days: {} };   // days: { "2026-07-20": [12.5, -3] }
+  }
+  function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
+
+  // ---- dates -------------------------------------------------------------
+  function keyOf(d) {
+    return d.getFullYear() + '-' +
+           String(d.getMonth() + 1).padStart(2, '0') + '-' +
+           String(d.getDate()).padStart(2, '0');
+  }
+  function todayKey() { return keyOf(new Date()); }
+
+  function totalFor(k) {
+    var list = state.days[k];
+    if (!list) return null;                       // null = nothing logged
+    return list.reduce(function (a, b) { return a + b; }, 0);
+  }
+  function money(n) {
+    var s = Math.abs(n).toFixed(2).replace(/\.00$/, '');
+    return (n < 0 ? '-$' : '$') + s;
+  }
+
+  // ---- dot field ---------------------------------------------------------
+  // Columns are weeks (Sun-Sat), rows are days of the week, oldest on the left.
+  function buildGrid() {
+    var grid = document.getElementById('grid');
+    grid.innerHTML = '';
+
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var start = new Date(today);
+    start.setDate(start.getDate() - today.getDay());        // Sunday of this week
+    start.setDate(start.getDate() - (WEEKS - 1) * 7);       // back to first column
+
+    var tKey = todayKey();
+    for (var i = 0; i < WEEKS * 7; i++) {
+      var d = new Date(start);
+      d.setDate(start.getDate() + i);
+      var k = keyOf(d);
+      var total = totalFor(k);
+
+      var b = document.createElement('button');
+      b.className = 'dot';
+      b.dataset.key = k;
+      b.title = k;
+
+      if (d > today) {
+        b.className += ' future';
+      } else if (total === null) {
+        b.className += ' past-empty';                       // nothing spent = still under goal
+      } else {
+        b.className += total > state.goal ? ' bad' : ' good';
+      }
+      if (k === tKey) b.className += ' today';
+      else if (k === selected) b.className += ' sel';
+
+      grid.appendChild(b);
+    }
+    // keep the newest weeks in view on narrow screens
+    var sc = document.getElementById('gridScroll');
+    sc.scrollLeft = sc.scrollWidth;
+  }
+
+  // ---- panel + entry list ------------------------------------------------
+  function render() {
+    buildGrid();
+
+    var total = totalFor(selected) || 0;
+    var amt = document.getElementById('amount');
+    amt.textContent = money(total);
+    amt.className = 'amount ' + (total > state.goal ? 'over' : 'under');
+
+    var isToday = selected === todayKey();
+    document.getElementById('dayLabel').textContent = isToday ? 'Today' : prettyDate(selected);
+    document.getElementById('goalLabel').textContent = 'goal ' + money(state.goal);
+    document.getElementById('entriesTitle').textContent =
+      (isToday ? "Today's" : prettyDate(selected) + "'s") + ' entries';
+
+    var list = state.days[selected] || [];
+    var box = document.getElementById('entryList');
+    box.innerHTML = '';
+    if (!list.length) {
+      box.innerHTML = '<div class="empty-note">Nothing logged yet.</div>';
+      return;
+    }
+    list.forEach(function (v, idx) {
+      var row = document.createElement('div');
+      row.className = 'entry';
+      row.innerHTML = '<span>' + money(v) + '</span>';
+      var del = document.createElement('button');
+      del.className = 'del';
+      del.textContent = '×';
+      del.onclick = function () {
+        state.days[selected].splice(idx, 1);
+        if (!state.days[selected].length) delete state.days[selected];
+        save(); render();
+      };
+      row.appendChild(del);
+      box.appendChild(row);
+    });
+  }
+
+  function prettyDate(k) {
+    var p = k.split('-');
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  // ---- modals ------------------------------------------------------------
+  function open(id, prefill) {
+    var m = document.getElementById(id);
+    m.classList.add('open');
+    var inp = m.querySelector('input');
+    inp.value = prefill === undefined ? '' : prefill;
+    setTimeout(function () { inp.focus(); inp.select(); }, 50);
+  }
+  function close(id) { document.getElementById(id).classList.remove('open'); }
+
+  document.querySelectorAll('[data-close]').forEach(function (b) {
+    b.onclick = function () { b.closest('.backdrop').classList.remove('open'); };
+  });
+  document.querySelectorAll('.backdrop').forEach(function (bd) {
+    bd.onclick = function (e) { if (e.target === bd) bd.classList.remove('open'); };
+  });
+
+  document.getElementById('addBtn').onclick = function () { open('addModal'); };
+  document.getElementById('goalBtn').onclick = function () { open('goalModal', state.goal); };
+
+  function commitAdd() {
+    var v = parseFloat(document.getElementById('addInput').value);
+    if (!isNaN(v) && v !== 0) {
+      if (!state.days[selected]) state.days[selected] = [];
+      state.days[selected].push(v);
+      save();
+    }
+    close('addModal'); render();
+  }
+  function commitGoal() {
+    var v = parseFloat(document.getElementById('goalInput').value);
+    if (!isNaN(v) && v > 0) { state.goal = v; save(); }
+    close('goalModal'); render();
+  }
+
+  document.getElementById('addSave').onclick = commitAdd;
+  document.getElementById('goalSave').onclick = commitGoal;
+  document.getElementById('addInput').onkeydown = function (e) { if (e.key === 'Enter') commitAdd(); };
+  document.getElementById('goalInput').onkeydown = function (e) { if (e.key === 'Enter') commitGoal(); };
+
+  // tap a dot to inspect / edit that day
+  document.getElementById('grid').onclick = function (e) {
+    var dot = e.target.closest('.dot');
+    if (!dot || dot.classList.contains('future')) return;
+    selected = dot.dataset.key;
+    render();
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>
