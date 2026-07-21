@@ -46,22 +46,25 @@
   html { background: var(--bg); }
   body {
     margin: 0;
-    min-height: 100vh;
+    min-height: 100dvh;                 /* 100vh overshoots on iOS */
     color: var(--cream);
     font: 400 16px/1.45 "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
     background:
       radial-gradient(120% 60% at 50% 0%, #3a2440 0%, rgba(58,36,64,0) 62%),
       var(--bg);
-    background-attachment: fixed;
-    overscroll-behavior-y: none;
+    background-repeat: no-repeat;
+    overscroll-behavior-y: none;        /* no rubber-band bounce */
   }
 
+  /* viewport-fit=cover + black-translucent means content runs under the
+     clock and the home indicator — inset all four sides. */
   .wrap {
     max-width: 520px;
     margin: 0 auto;
-    padding:
-      calc(env(safe-area-inset-top) + 18px) 18px
-      calc(env(safe-area-inset-bottom) + 32px);
+    padding-top:    calc(env(safe-area-inset-top) + 18px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 32px);
+    padding-left:   calc(env(safe-area-inset-left) + 18px);
+    padding-right:  calc(env(safe-area-inset-right) + 18px);
   }
 
   /* ---------- header: the sun over the ridge ---------- */
