@@ -152,6 +152,8 @@
     font-variant-numeric: tabular-nums; margin-bottom: 7px;
   }
   .week-label { letter-spacing: 0.19em; text-transform: uppercase; }
+  .week-label em { font-style: normal; opacity: 0.6; }
+  .readout .day.back { color: var(--sun); cursor: pointer; }
   .week-top b { color: var(--cream); font-weight: 500; }
   .week-bar {
     height: 6px; border-radius: 999px; overflow: hidden;
@@ -367,7 +369,7 @@
 
     <div class="week">
       <div class="week-top">
-        <span class="week-label">This week</span>
+        <span class="week-label">This week <em id="resetHint"></em></span>
         <span><b id="weekLeft">$1,400 left</b> · <span id="weekDays">7 days</span></span>
       </div>
       <div class="week-bar" id="weekBar"><div class="week-fill" id="weekFill"></div></div>
@@ -396,7 +398,7 @@
 
 <div class="backdrop" id="addModal">
   <div class="modal">
-    <h3>Add spend</h3>
+    <h3 id="addTitle">Add spend</h3>
     <p>Negative amounts undo a mistake — try <b>-12</b>.</p>
     <input type="text" inputmode="decimal" id="addInput" placeholder="0.00" autocomplete="off">
     <input type="text" class="name-field" id="nameInput" placeholder="What was it? (optional)" autocomplete="off">
@@ -443,6 +445,10 @@
   var SUPA_KEY = 'sb_publishable_R90eTho_4YY01IR0xApDnQ_Id_ujq95';
   var CACHE = 'dailyDollar.cache';
   var MAX_WEEKS = 30, MIN_WEEKS = 10;
+  // Payday is Wednesday, so that's when the envelope resets and where the grid
+  // columns break. 0 = Sunday … 3 = Wednesday.
+  var WEEK_START = 3;
+  var DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   // Used only until the categories table answers (or if it doesn't exist yet).
   var DEFAULT_CATEGORIES = [
     { id: 'd1', name: 'Gas' },
@@ -502,35 +508,56 @@
     }, 0);
   }
   // ---- the weekly envelope ------------------------------------------------
-  // Allowance accrues at `goal` per elapsed day and resets every Sunday.
-  // Whatever balance is left over from earlier in the week lands on today —
-  // so going over yesterday lowers today, and coming in under raises it.
-  // Banked credit is capped at one day's goal so a stretch of unlogged days
-  // (or one very frugal week) can't buy a single enormous blowout.
-  function weekStats() {
-    var today = new Date(); today.setHours(0, 0, 0, 0);
-    var idx = today.getDay();                       // 0 = Sunday
-    var start = new Date(today);
-    start.setDate(today.getDate() - idx);
+  // Allowance accrues at `goal` per day and resets on WEEK_START (payday).
+  // Whatever balance is left from earlier in the week lands on today — over
+  // yesterday lowers today, under raises it. Credit is uncapped: two genuinely
+  // spend-free days should be worth two full days of room.
+  //
+  // Accrual never starts before the first day we ever logged, so days from
+  // before the app existed can't quietly bank money. That also means a fresh
+  // start (or a retroactive entry on an older day) settles itself.
+  var DAY = 86400000;
+  function midnight(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function daysBetween(a, b) { return Math.round((midnight(b) - midnight(a)) / DAY); }
 
+  function firstLoggedDate() {
+    var min = null;
+    state.entries.forEach(function (e) { if (!min || e.day < min) min = e.day; });
+    if (!min) return null;
+    var p = min.split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2]);
+  }
+
+  function weekStats() {
+    var today = midnight(new Date());
+
+    var off = (today.getDay() - WEEK_START + 7) % 7;
+    var wkStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - off);
+    var wkEnd   = new Date(wkStart.getFullYear(), wkStart.getMonth(), wkStart.getDate() + 6);
+
+    var first = firstLoggedDate() || today;
+    var eff = first > wkStart ? first : wkStart;      // accrue from whichever is later
+    if (eff > today) eff = today;
+
+    var before = daysBetween(eff, today);             // full days before today
     var spentWeek = 0, spentBefore = 0;
-    for (var i = 0; i <= idx; i++) {
-      var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-      var t = totalFor(keyOf(d)) || 0;              // live spend only
+    for (var i = 0; i <= before; i++) {
+      var d = new Date(eff.getFullYear(), eff.getMonth(), eff.getDate() + i);
+      var t = totalFor(keyOf(d)) || 0;                // live spend only
       spentWeek += t;
-      if (i < idx) spentBefore += t;
+      if (i < before) spentBefore += t;
     }
 
-    var carry = (state.goal * idx) - spentBefore;   // + = banked, − = owed
-    if (carry > state.goal) carry = state.goal;
+    var budget = state.goal * (daysBetween(eff, wkEnd) + 1);
+    var carry  = state.goal * before - spentBefore;   // + = banked, − = owed
 
     return {
-      budget:  state.goal * 7,
-      spent:   spentWeek,
-      left:    state.goal * 7 - spentWeek,
-      daysLeft: 7 - idx,
-      target:  state.goal + carry,
-      carry:   carry
+      budget:   budget,
+      spent:    spentWeek,
+      left:     budget - spentWeek,
+      daysLeft: daysBetween(today, wkEnd) + 1,
+      target:   state.goal + carry,
+      carry:    carry
     };
   }
 
@@ -620,8 +647,9 @@
     grid.innerHTML = '';
 
     var today = new Date(); today.setHours(0, 0, 0, 0);
+    var off = (today.getDay() - WEEK_START + 7) % 7;
     var start = new Date(today);
-    start.setDate(start.getDate() - today.getDay());       // Sunday of this week
+    start.setDate(start.getDate() - off);                  // payday of this week
     start.setDate(start.getDate() - (weeks - 1) * 7);      // first column
 
     var tKey = todayKey();
@@ -661,6 +689,8 @@
       over ? money(-w.left) + ' over' : money(w.left) + ' left';
     document.getElementById('weekDays').textContent =
       w.daysLeft + (w.daysLeft === 1 ? ' day' : ' days');
+    document.getElementById('resetHint').textContent =
+      '· resets ' + DAY_NAMES[WEEK_START].slice(0, 3);
 
     // today's target only makes sense while looking at today
     var line = document.getElementById('targetLine');
@@ -695,7 +725,9 @@
     }
 
     var isToday = selected === todayKey();
-    document.getElementById('dayLabel').textContent = isToday ? 'Today' : prettyDate(selected);
+    var dl = document.getElementById('dayLabel');
+    dl.textContent = isToday ? 'Today' : prettyDate(selected) + '  ✕';
+    dl.className = 'day' + (isToday ? '' : ' back');
     document.getElementById('goalVal').textContent = money(state.goal);
     document.getElementById('entriesTitle').textContent = isToday ? 'Today' : prettyDate(selected);
 
@@ -897,7 +929,17 @@
     pendingFixed = false;
     editingChips = false;
     renderChips();
+    // make it unmistakable which day you're adding to
+    document.getElementById('addTitle').textContent =
+      selected === todayKey() ? 'Add spend' : 'Add to ' + prettyDate(selected);
     open('addModal');
+  };
+
+  // tap the date label to come back to today
+  document.getElementById('dayLabel').onclick = function () {
+    if (selected === todayKey()) return;
+    selected = todayKey();
+    render();
   };
 
   function syncCatToggle() {
