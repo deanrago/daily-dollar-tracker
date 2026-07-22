@@ -145,6 +145,22 @@
   .dot.sel    { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3.5px var(--muted); }
   .dot:active { transform: scale(0.86); }
 
+  /* the 8th row — one dot per column, the week as a whole. Round, and set off
+     by a gap, so it reads as a summary rather than an eighth day. */
+  .grid.summary {
+    grid-template-rows: var(--dot, 14px);
+    margin-top: calc(var(--gap, 5px) * 2.4);
+  }
+  .sdot {
+    width: var(--dot, 14px); height: var(--dot, 14px);
+    border-radius: 50%;
+    background: transparent;
+    border: 1.5px solid rgba(74,61,92,0.5);
+  }
+  .sdot.good { background: var(--good); border-color: var(--good); }
+  .sdot.bad  { background: var(--bad);  border-color: var(--bad); }
+  .sdot.live { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3.5px var(--sun); }
+
   /* ---------- weekly envelope meter ---------- */
   .week { margin-top: 20px; }
   .week-top {
@@ -370,6 +386,7 @@
 
   <div class="card">
     <div class="grid" id="grid"></div>
+    <div class="grid summary" id="summary"></div>
 
     <div class="week">
       <div class="week-top">
@@ -557,6 +574,34 @@
     return state.goal + (state.goal * before - spentBefore);
   }
 
+  // Was this whole week a success? Same question as a day, one level up:
+  // did live spending stay inside the week's total allowance. A week still in
+  // progress is judged against its full budget — so it reads green while
+  // there's still room and flips red the moment the week is blown, which is
+  // information you can act on rather than a verdict you wait for.
+  function weekSummary(wkStart) {
+    var today = midnight(new Date());
+    var first = firstLoggedDate();
+    var end = new Date(wkStart.getFullYear(), wkStart.getMonth(), wkStart.getDate() + 6);
+
+    if (!first || wkStart > today) return { state: 'none' };
+    var eff = first > wkStart ? first : wkStart;
+    if (eff > today) return { state: 'none' };
+
+    var last = end < today ? end : today;
+    var spent = 0;
+    for (var i = 0; i <= daysBetween(eff, last); i++) {
+      var d = new Date(eff.getFullYear(), eff.getMonth(), eff.getDate() + i);
+      spent += totalFor(keyOf(d)) || 0;
+    }
+    var budget = state.goal * (daysBetween(eff, end) + 1);
+    return {
+      state: spent > budget ? 'bad' : 'good',
+      live:  end >= today,                       // week still running
+      spent: spent, budget: budget
+    };
+  }
+
   function weekStats() {
     var today = midnight(new Date());
     var wk = weekBounds(today);
@@ -699,6 +744,21 @@
       frag.appendChild(b);
     }
     grid.appendChild(frag);
+
+    // the 8th row: one dot per column, for the week as a whole
+    var sum = document.getElementById('summary');
+    sum.innerHTML = '';
+    var sfrag = document.createDocumentFragment();
+    for (var w = 0; w < weeks; w++) {
+      var ws = new Date(start.getFullYear(), start.getMonth(), start.getDate() + w * 7);
+      var r = weekSummary(ws);
+      var s = document.createElement('div');
+      s.className = 'sdot' + (r.state === 'none' ? '' : ' ' + r.state) + (r.live ? ' live' : '');
+      s.title = r.state === 'none' ? ''
+        : money(r.spent) + ' of ' + money(r.budget) + ' · week of ' + keyOf(ws);
+      sfrag.appendChild(s);
+    }
+    sum.appendChild(sfrag);
   }
 
   // ---- render ------------------------------------------------------------
