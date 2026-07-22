@@ -585,6 +585,7 @@
     var end = new Date(wkStart.getFullYear(), wkStart.getMonth(), wkStart.getDate() + 6);
 
     if (!first || wkStart > today) return { state: 'none' };
+    if (end < first) return { state: 'none' };     // week ended before we existed
     var eff = first > wkStart ? first : wkStart;
     if (eff > today) return { state: 'none' };
 
