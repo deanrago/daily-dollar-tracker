@@ -140,6 +140,7 @@
   .dot.good   { background: var(--good); border-color: var(--good); }
   .dot.bad    { background: var(--bad);  border-color: var(--bad); }
   .dot.future { border-color: rgba(74,61,92,0.45); }
+  .dot.future.soon { border-color: rgba(122,104,146,0.7); border-style: dashed; }
   .dot.today  { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3.5px var(--sun); }
   .dot.sel    { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3.5px var(--muted); }
   .dot:active { transform: scale(0.86); }
@@ -172,6 +173,9 @@
   }
   .target-line.tight { color: var(--sun); }
   .target-line.loose { color: var(--sage); }
+  .target-line.proj  { color: var(--muted); }
+  .amount.proj { color: var(--teal); }
+  .add:disabled { opacity: 0.28; box-shadow: none; cursor: default; }
 
   /* ---------- today readout ---------- */
   .readout { text-align: center; margin-top: 24px; }
@@ -528,36 +532,53 @@
     return new Date(+p[0], +p[1] - 1, +p[2]);
   }
 
+  function weekBounds(day) {
+    var off = (day.getDay() - WEEK_START + 7) % 7;
+    var s = new Date(day.getFullYear(), day.getMonth(), day.getDate() - off);
+    return { start: s, end: new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6) };
+  }
+
+  // What is (or will be) the target for `day`, given everything logged before
+  // it? Works for a future day too — that's the projection you get by tapping
+  // tomorrow, and it moves as today's spending changes.
+  function targetFor(day) {
+    var today = midnight(new Date());
+    var wk = weekBounds(day);
+    var first = firstLoggedDate() || today;
+    var eff = first > wk.start ? first : wk.start;
+    if (eff > day) eff = day;
+
+    var before = daysBetween(eff, day);
+    var spentBefore = 0;
+    for (var i = 0; i < before; i++) {
+      var d = new Date(eff.getFullYear(), eff.getMonth(), eff.getDate() + i);
+      spentBefore += totalFor(keyOf(d)) || 0;
+    }
+    return state.goal + (state.goal * before - spentBefore);
+  }
+
   function weekStats() {
     var today = midnight(new Date());
-
-    var off = (today.getDay() - WEEK_START + 7) % 7;
-    var wkStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - off);
-    var wkEnd   = new Date(wkStart.getFullYear(), wkStart.getMonth(), wkStart.getDate() + 6);
+    var wk = weekBounds(today);
 
     var first = firstLoggedDate() || today;
-    var eff = first > wkStart ? first : wkStart;      // accrue from whichever is later
+    var eff = first > wk.start ? first : wk.start;     // accrue from whichever is later
     if (eff > today) eff = today;
 
-    var before = daysBetween(eff, today);             // full days before today
-    var spentWeek = 0, spentBefore = 0;
-    for (var i = 0; i <= before; i++) {
+    var spentWeek = 0;
+    for (var i = 0; i <= daysBetween(eff, today); i++) {
       var d = new Date(eff.getFullYear(), eff.getMonth(), eff.getDate() + i);
-      var t = totalFor(keyOf(d)) || 0;                // live spend only
-      spentWeek += t;
-      if (i < before) spentBefore += t;
+      spentWeek += totalFor(keyOf(d)) || 0;            // live spend only
     }
 
-    var budget = state.goal * (daysBetween(eff, wkEnd) + 1);
-    var carry  = state.goal * before - spentBefore;   // + = banked, − = owed
-
+    var budget = state.goal * (daysBetween(eff, wk.end) + 1);
     return {
       budget:   budget,
       spent:    spentWeek,
       left:     budget - spentWeek,
-      daysLeft: daysBetween(today, wkEnd) + 1,
-      target:   state.goal + carry,
-      carry:    carry
+      daysLeft: daysBetween(today, wk.end) + 1,
+      target:   targetFor(today),
+      weekEnd:  wk.end
     };
   }
 
@@ -653,6 +674,7 @@
     start.setDate(start.getDate() - (weeks - 1) * 7);      // first column
 
     var tKey = todayKey();
+    var wkEnd = weekBounds(today).end;
     var frag = document.createDocumentFragment();
 
     for (var i = 0; i < weeks * 7; i++) {
@@ -662,7 +684,9 @@
 
       var b = document.createElement('button');
       var cls = 'dot';
-      if (d > today)          cls += ' future';            // hollow, extra faint
+      // future days in the current envelope can be tapped for a projection;
+      // past the reset the slate is wiped, so there's nothing to project
+      if (d > today)          cls += (d <= wkEnd ? ' future soon' : ' future');
       else if (total !== null) cls += (total > state.goal ? ' bad' : ' good');
       // else: past with nothing logged — stays hollow grey
 
@@ -692,8 +716,21 @@
     document.getElementById('resetHint').textContent =
       '· resets ' + DAY_NAMES[WEEK_START].slice(0, 3);
 
-    // today's target only makes sense while looking at today
     var line = document.getElementById('targetLine');
+
+    if (isFutureSelected()) {
+      var d = selectedDate();
+      line.style.display = '';
+      line.className = 'target-line proj';
+      // beyond tomorrow the number assumes nothing gets spent in between —
+      // say so, rather than implying it's a firm figure
+      line.textContent = daysBetween(midnight(new Date()), d) === 1
+        ? "tomorrow's projection · if today ends here"
+        : 'projected · if you spend nothing until then';
+      return;
+    }
+
+    // today's target only makes sense while looking at today
     if (selected === todayKey() && Math.round(w.target) !== Math.round(state.goal)) {
       line.style.display = '';
       line.className = 'target-line' + (w.target < state.goal ? ' tight' : ' loose');
@@ -705,15 +742,32 @@
     }
   }
 
+  function selectedDate() {
+    var p = selected.split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2]);
+  }
+  function isFutureSelected() { return selectedDate() > midnight(new Date()); }
+
   function render() {
     buildGrid();
     renderWeek();
 
-    var total = totalFor(selected);
+    var future = isFutureSelected();
     var amt = document.getElementById('amount');
-    amt.textContent = money(total || 0);
-    amt.className = 'amount ' +
-      (total === null ? 'zero' : total > state.goal ? 'over' : 'under');
+    var total = totalFor(selected);
+
+    if (future) {
+      // looking ahead: show what the day will allow, not what was spent
+      var proj = targetFor(selectedDate());
+      amt.textContent = proj <= 0 ? '$0' : money(proj);
+      amt.className = 'amount proj';
+    } else {
+      amt.textContent = money(total || 0);
+      amt.className = 'amount ' +
+        (total === null ? 'zero' : total > state.goal ? 'over' : 'under');
+    }
+
+    document.getElementById('addBtn').disabled = future;
 
     var fx = fixedTotalFor(selected);
     var fxEl = document.getElementById('fixedLine');
@@ -726,7 +780,9 @@
 
     var isToday = selected === todayKey();
     var dl = document.getElementById('dayLabel');
-    dl.textContent = isToday ? 'Today' : prettyDate(selected) + '  ✕';
+    var ahead = future && daysBetween(midnight(new Date()), selectedDate()) === 1;
+    dl.textContent = isToday ? 'Today'
+                   : (ahead ? 'Tomorrow' : prettyDate(selected)) + '  ✕';
     dl.className = 'day' + (isToday ? '' : ' back');
     document.getElementById('goalVal').textContent = money(state.goal);
     document.getElementById('entriesTitle').textContent = isToday ? 'Today' : prettyDate(selected);
@@ -734,6 +790,10 @@
     var list = entriesFor(selected);
     var box = document.getElementById('entryList');
     box.innerHTML = '';
+    if (future) {
+      box.innerHTML = '<div class="empty-note">Hasn\'t happened yet.</div>';
+      return;
+    }
     if (!list.length) {
       box.innerHTML = '<div class="empty-note">Nothing logged yet.</div>';
       return;
@@ -981,7 +1041,8 @@
 
   document.getElementById('grid').onclick = function (e) {
     var dot = e.target.closest('.dot');
-    if (!dot || dot.classList.contains('future')) return;
+    if (!dot) return;
+    if (dot.classList.contains('future') && !dot.classList.contains('soon')) return;
     selected = dot.dataset.key;
     render();
   };
