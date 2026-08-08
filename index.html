@@ -269,10 +269,18 @@
   /* quick-pick category chips in the add sheet */
   .chips { margin-top: 14px; }
   .chip-head {
+    display: flex; align-items: center; gap: 7px;
     font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
     color: var(--muted); margin: 12px 0 7px;
+    cursor: pointer; user-select: none; -webkit-user-select: none;
   }
   .chip-head:first-child { margin-top: 0; }
+  .chip-head .caret { font-size: 8px; transition: transform 0.15s ease; }
+  .chip-head.closed .caret { transform: rotate(-90deg); }
+  .chip-head .count {
+    padding: 0 7px; border-radius: 999px; border: 1px solid var(--edge);
+    letter-spacing: 0; font-size: 10px; line-height: 1.6;
+  }
   .chip-row { display: flex; flex-wrap: wrap; gap: 7px; }
   .chip-row.fixed button { border-style: dotted; opacity: 0.85; }
   .chip-row.fixed button.on { opacity: 1; }
@@ -294,14 +302,18 @@
   .chips button.chip-add  { border-style: dashed; color: var(--sage); }
   .chips button.chip-edit { color: var(--muted); opacity: 0.8; }
   .chips button.chip-edit.on { background: rgba(255,255,255,0.12); color: var(--cream); }
-  .chips button.removable {
-    border-color: var(--bad); color: var(--bad);
-    padding-right: 26px; position: relative;
+  .chips button.editable {
+    border-style: dashed; border-color: var(--muted); color: var(--cream);
   }
-  .chips button.removable::after {
-    content: "×"; position: absolute; right: 9px; top: 50%;
-    transform: translateY(-52%); font-size: 15px;
+
+  .btn-del {
+    display: none; width: 100%; margin-top: 12px; padding: 12px;
+    border-radius: 14px; border: 1px solid rgba(217,84,63,0.5);
+    background: rgba(217,84,63,0.12); color: var(--bad);
+    font-family: "Outfit", sans-serif; font-size: 14px; font-weight: 500;
+    cursor: pointer;
   }
+  .btn-del.show { display: block; }
 
   .modal input.name-field {
     font-size: 16px; text-align: left; padding: 13px 15px; margin-top: 11px;
@@ -343,11 +355,17 @@
     position: fixed; inset: 0; background: rgba(14,8,20,0.72);
     backdrop-filter: blur(3px);
     display: none; align-items: center; justify-content: center;
-    padding: 22px; z-index: 20;
+    padding: calc(env(safe-area-inset-top) + 18px) 22px
+             calc(env(safe-area-inset-bottom) + 18px);
+    z-index: 20;
   }
   .backdrop.open { display: flex; }
   .modal {
     width: 100%; max-width: 330px;
+    max-height: 100%;                  /* never taller than the screen … */
+    overflow-y: auto;                  /* … scroll inside instead */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
     border: 1px solid var(--edge); border-radius: 22px; padding: 24px;
     box-shadow: 0 20px 50px rgba(0,0,0,0.5);
@@ -433,13 +451,14 @@
 
 <div class="backdrop" id="catModal">
   <div class="modal">
-    <h3>New category</h3>
-    <p>It'll show up as a quick-pick for both of you.</p>
+    <h3 id="catTitle">New category</h3>
+    <p id="catHint">It'll show up as a quick-pick for both of you.</p>
     <input type="text" class="name-field" id="catInput" placeholder="e.g. Laundry" autocomplete="off">
     <div class="seg">
       <button id="catLive" class="on">In the moment</button>
       <button id="catFixed">Committed</button>
     </div>
+    <button class="btn-del" id="catDelete">Delete category</button>
     <div class="row">
       <button class="btn-cancel" data-close>Cancel</button>
       <button class="btn-ok" id="catSave">Add</button>
@@ -480,12 +499,13 @@
     { id: 'd6', name: 'Cleo' }
   ];
 
-  // The `label` column / `categories` table may not exist yet — both are
-  // detected on first pull so the app keeps working either way.
-  var hasLabel = true, hasCategories = true;
+  // The `label` column / `categories` / `category_renames` tables may not
+  // exist yet — all are detected on first use so the app works either way.
+  var hasLabel = true, hasCategories = true, hasRenames = true;
   var editingChips = false;
   var pendingFixed = false;    // is the entry being added a committed cost?
-  var newCatFixed  = false;    // which section a newly created category lands in
+  var newCatFixed  = false;    // which section the category in the modal lands in
+  var editingCat   = null;     // category open in the modal, or null = creating
 
   // ---- state -------------------------------------------------------------
   // entries: [{id, day, amount}] — id is the Supabase row id, or a local "L…" string
@@ -947,9 +967,15 @@
 
   // ---- quick-pick chips --------------------------------------------------
   // Tap to fill the name, tap again to clear. The pencil toggles edit mode,
-  // where tapping a chip deletes it instead.
+  // where tapping a chip opens it in the category modal (rename / move /
+  // delete). Section headers fold their rows away — the list is only going
+  // to grow, and the Add button has to stay reachable.
   var chipBox = document.getElementById('chips');
   var nameInput = document.getElementById('nameInput');
+
+  var COLLAPSE = 'dailyDollar.collapsed';
+  var collapsedSections = {};
+  try { collapsedSections = JSON.parse(localStorage.getItem(COLLAPSE)) || {}; } catch (e) {}
 
   // Three ways to tag: type a name (always live), tap a live pill, or tap a
   // fixed pill. Whichever pill you tapped decides `pendingFixed`; typing by
@@ -958,12 +984,27 @@
     chipBox.innerHTML = '';
     var cur = nameInput.value.trim();
 
-    function section(title, list, isFixed) {
+    function section(key, title, list, isFixed) {
       if (!list.length && !isFixed) return;
+      var closed = !!collapsedSections[key];
+
       var head = document.createElement('div');
-      head.className = 'chip-head';
-      head.textContent = title;
+      head.className = 'chip-head' + (closed ? ' closed' : '');
+      var caret = document.createElement('span');
+      caret.className = 'caret'; caret.textContent = '▾';
+      head.appendChild(caret);
+      head.appendChild(document.createTextNode(title));
+      var count = document.createElement('span');
+      count.className = 'count'; count.textContent = list.length;
+      head.appendChild(count);
+      head.onclick = function () {
+        collapsedSections[key] = !collapsedSections[key];
+        try { localStorage.setItem(COLLAPSE, JSON.stringify(collapsedSections)); } catch (e) {}
+        renderChips();
+      };
       chipBox.appendChild(head);
+
+      if (closed) return;
 
       var row = document.createElement('div');
       row.className = 'chip-row' + (isFixed ? ' fixed' : '');
@@ -971,9 +1012,9 @@
         var b = document.createElement('button');
         b.textContent = c.name;
         if (!editingChips && c.name === cur && pendingFixed === !!c.fixed) b.className = 'on';
-        if (editingChips) b.classList.add('removable');
+        if (editingChips) b.classList.add('editable');
         b.onclick = function () {
-          if (editingChips) { deleteCategory(c); return; }
+          if (editingChips) { openCatEditor(c); return; }
           if (nameInput.value === c.name && pendingFixed === !!c.fixed) {
             nameInput.value = ''; pendingFixed = false;
           } else {
@@ -989,8 +1030,8 @@
     var live  = state.categories.filter(function (c) { return !c.fixed; });
     var fixed = state.categories.filter(function (c) { return c.fixed; });
 
-    section('In the moment', live, false);
-    section('Committed — doesn’t count toward the day', fixed, true);
+    section('live',  'In the moment', live, false);
+    section('fixed', 'Committed — doesn’t count toward the day', fixed, true);
 
     var tools = document.createElement('div');
     tools.className = 'chip-row';
@@ -998,7 +1039,7 @@
     var add = document.createElement('button');
     add.className = 'chip-add';
     add.textContent = '+ New';
-    add.onclick = function () { newCatFixed = false; open('catModal'); syncCatToggle(); };
+    add.onclick = openCatCreator;
     tools.appendChild(add);
 
     var edit = document.createElement('button');
@@ -1039,6 +1080,51 @@
     }
   }
 
+  // Renaming a category rewrites history on purpose: every past entry logged
+  // under the old name follows it, and the rename itself is recorded (old,
+  // new, when) both in the cache and in the category_renames table.
+  function saveCategoryEdit(cat, name, fixed) {
+    name = name.trim().slice(0, 40);
+    if (!name) return;
+    var clash = state.categories.some(function (x) {
+      return x !== cat && x.name.toLowerCase() === name.toLowerCase();
+    });
+    if (clash) return;
+
+    var oldName = cat.name;
+    var renamed = name !== oldName;
+    cat.name = name;
+    cat.fixed = !!fixed;
+
+    if (renamed) {
+      state.entries.forEach(function (e) { if (e.label === oldName) e.label = name; });
+      (state.renames = state.renames || []).push(
+        { old: oldName, name: name, at: new Date().toISOString() });
+    }
+    saveCache(); renderChips(); render();
+
+    if (hasCategories && typeof cat.id === 'number') {
+      api('categories?id=eq.' + cat.id, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: name, fixed: !!fixed })
+      }).catch(function () { setOnline(false); });
+    }
+    if (!renamed) return;
+    if (hasLabel) {
+      api('entries?label=eq.' + encodeURIComponent(oldName), {
+        method: 'PATCH',
+        body: JSON.stringify({ label: name })
+      }).catch(function () { setOnline(false); });
+    }
+    if (hasRenames) {
+      api('category_renames', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({ old_name: oldName, new_name: name })
+      }).catch(function () { hasRenames = false; });   // table not created yet
+    }
+  }
+
   // typing by hand always means a live, in-the-moment expense
   nameInput.oninput = function () {
     pendingFixed = false;
@@ -1070,10 +1156,35 @@
   document.getElementById('catLive').onclick  = function () { newCatFixed = false; syncCatToggle(); };
   document.getElementById('catFixed').onclick = function () { newCatFixed = true;  syncCatToggle(); };
 
+  function openCatCreator() {
+    editingCat = null; newCatFixed = false;
+    document.getElementById('catTitle').textContent = 'New category';
+    document.getElementById('catHint').textContent = "It'll show up as a quick-pick for both of you.";
+    document.getElementById('catSave').textContent = 'Add';
+    document.getElementById('catDelete').classList.remove('show');
+    open('catModal'); syncCatToggle();
+  }
+  function openCatEditor(c) {
+    editingCat = c; newCatFixed = !!c.fixed;
+    document.getElementById('catTitle').textContent = 'Edit category';
+    document.getElementById('catHint').textContent =
+      'Renaming also updates every past entry logged under the old name.';
+    document.getElementById('catSave').textContent = 'Save';
+    document.getElementById('catDelete').classList.add('show');
+    open('catModal', c.name); syncCatToggle();
+  }
+
   document.getElementById('catSave').onclick = function () {
     var v = document.getElementById('catInput').value;
-    close('catModal');
-    addCategory(v, newCatFixed);
+    var cat = editingCat;
+    close('catModal'); editingCat = null;
+    if (cat) saveCategoryEdit(cat, v, newCatFixed);
+    else addCategory(v, newCatFixed);
+  };
+  document.getElementById('catDelete').onclick = function () {
+    var cat = editingCat;
+    close('catModal'); editingCat = null;
+    if (cat) deleteCategory(cat);
   };
   document.getElementById('catInput').onkeydown = function (e) {
     if (e.key === 'Enter') document.getElementById('catSave').click();

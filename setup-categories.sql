@@ -27,7 +27,8 @@ insert into categories (name, fixed, sort) values
   ('HBO',                          true,  18)
 on conflict (name) do nothing;
 
--- entries carry their own copy of the name + committed flag, so re-tagging a
--- category later never rewrites history
+-- entries carry their own copy of the name + committed flag. Renaming a
+-- category deliberately rewrites those labels (see setup-renames.sql for the
+-- audit trail); flipping live/committed only affects entries going forward.
 alter table entries add column if not exists label text;
 alter table entries add column if not exists fixed boolean not null default false;
