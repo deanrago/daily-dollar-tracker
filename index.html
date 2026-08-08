@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Daily Dollar</title>
 
-<meta name="theme-color" content="#1b1424">
+<meta name="theme-color" content="#1b1424" id="themeMeta">
 <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -19,15 +19,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..800,50,1&family=Outfit:wght@300..700&display=swap" rel="stylesheet">
 
 <style>
+  /* Two palettes, one for each of us — whoever's phone this is, the whole app
+     wears their colors, so you can tell at a glance who you're logging as.
+     Dean is dusk over the canyon; Kyle is the same poster at daybreak.
+     `--cream` is the foreground colour in both (dark ink under Kyle's light). */
   :root {
-    /* dusk over the canyon */
     --bg:        #1b1424;
     --bg-2:      #241a30;
     --card:      #271d34;
     --edge:      #3b2e4c;
+    --glow:      #3a2440;               /* the wash behind the header */
 
-    --cream:     #f7eee1;
+    --cream:     #f7eee1;               /* foreground */
     --muted:     #a294b4;
+    --ink:       #2a1420;               /* text that sits on the sun gradient */
 
     /* 70s park poster */
     --sun:       #f2a541;
@@ -39,7 +44,49 @@
 
     --good:      #8cb86a;
     --bad:       #d9543f;
-    --hollow:    #4a3d5c;
+    --hollow:      #4a3d5c;             /* a day with nothing logged */
+    --hollow-dim:  rgba(74,61,92,0.45); /* a day still to come */
+    --hollow-lit:  rgba(122,104,146,0.7);
+
+    --surface-1: rgba(255,255,255,0.05);
+    --surface-2: rgba(255,255,255,0.12);
+    --field:     rgba(0,0,0,0.26);
+    --scrim:     rgba(14,8,20,0.72);
+    --shadow-card:  0 14px 34px rgba(0,0,0,0.32);
+    --shadow-modal: 0 20px 50px rgba(0,0,0,0.5);
+    --shadow-add:   0 7px 18px rgba(217,99,63,0.34);
+  }
+
+  html.kyle {
+    --bg:        #f6ead8;
+    --bg-2:      #efe0c9;
+    --card:      #fdf7ec;
+    --edge:      #dcc3a4;
+    --glow:      #ffd9a0;
+
+    --cream:     #33202b;
+    --muted:     #87705c;
+
+    --sun:       #e08d1e;
+    --clay:      #c4522c;
+    --rose:      #cf6a83;
+    --sage:      #5f9541;
+    --pine:      #4e8437;
+    --teal:      #2f7d78;
+
+    --good:      #5f9541;
+    --bad:       #c03a26;
+    --hollow:      #cdb497;
+    --hollow-dim:  rgba(205,180,151,0.55);
+    --hollow-lit:  rgba(150,118,88,0.75);
+
+    --surface-1: rgba(80,45,20,0.05);
+    --surface-2: rgba(80,45,20,0.13);
+    --field:     rgba(255,255,255,0.62);
+    --scrim:     rgba(70,42,22,0.44);
+    --shadow-card:  0 14px 34px rgba(103,68,32,0.16);
+    --shadow-modal: 0 20px 50px rgba(103,68,32,0.28);
+    --shadow-add:   0 7px 18px rgba(196,82,44,0.3);
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -50,7 +97,7 @@
     color: var(--cream);
     font: 400 16px/1.45 "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
     background:
-      radial-gradient(120% 60% at 50% 0%, #3a2440 0%, rgba(58,36,64,0) 62%),
+      radial-gradient(120% 60% at 50% 0%, var(--glow) 0%, transparent 62%),
       var(--bg);
     background-repeat: no-repeat;
     overscroll-behavior-y: none;        /* no rubber-band bounce */
@@ -84,6 +131,10 @@
       rgba(255,242,225,0.00) 0px, rgba(255,242,225,0.00) 9px,
       rgba(255,242,225,0.22) 9px, rgba(255,242,225,0.22) 12px);
   }
+  /* dusk for Dean, dawn for Kyle — the badge flips with the palette */
+  html.kyle .sun-badge {
+    background: linear-gradient(180deg, var(--rose) 0%, var(--clay) 45%, var(--sun) 100%);
+  }
   .sun-badge h1 {
     position: relative;
     margin: 0 0 9px;
@@ -92,7 +143,22 @@
     font-weight: 700;
     font-size: 27px;
     letter-spacing: -0.015em;
-    color: #2a1420;
+    color: var(--ink);
+  }
+
+  /* ---------- who's logging ---------- */
+  .who-seg {
+    display: flex; gap: 8px; justify-content: center; margin-top: 12px;
+  }
+  .who-seg button {
+    padding: 6px 18px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--edge); background: var(--surface-1);
+    color: var(--muted); font-family: "Outfit", sans-serif;
+    font-size: 11.5px; letter-spacing: 0.16em; text-transform: uppercase;
+  }
+  .who-seg button.on {
+    background: linear-gradient(160deg, var(--sun), var(--clay));
+    border-color: transparent; color: var(--ink); font-weight: 600;
   }
 
   .subhead {
@@ -105,11 +171,11 @@
   .gear {
     display: block; margin: 12px auto 0;
     width: 36px; height: 36px; border-radius: 50%;
-    background: rgba(255,255,255,0.05); border: 1px solid var(--edge);
+    background: var(--surface-1); border: 1px solid var(--edge);
     color: var(--muted); font-size: 15px; cursor: pointer;
     line-height: 1; padding: 0;
   }
-  .gear:active { background: rgba(255,255,255,0.11); color: var(--cream); }
+  .gear:active { background: var(--surface-2); color: var(--cream); }
 
   /* ---------- card ---------- */
   .card {
@@ -117,7 +183,7 @@
     border: 1px solid var(--edge);
     border-radius: 22px;
     padding: 20px 18px 24px;
-    box-shadow: 0 14px 34px rgba(0,0,0,0.32);
+    box-shadow: var(--shadow-card);
   }
 
   /* ---------- the dot field ---------- */
@@ -139,8 +205,8 @@
   }
   .dot.good   { background: var(--good); border-color: var(--good); }
   .dot.bad    { background: var(--bad);  border-color: var(--bad); }
-  .dot.future { border-color: rgba(74,61,92,0.45); }
-  .dot.future.soon { border-color: rgba(122,104,146,0.7); border-style: dashed; }
+  .dot.future { border-color: var(--hollow-dim); }
+  .dot.future.soon { border-color: var(--hollow-lit); border-style: dashed; }
   .dot.today  { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3.5px var(--sun); }
   .dot.sel    { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3.5px var(--muted); }
   .dot:active { transform: scale(0.86); }
@@ -155,11 +221,83 @@
     width: var(--dot, 14px); height: var(--dot, 14px);
     border-radius: 50%;
     background: transparent;
-    border: 1.5px solid rgba(74,61,92,0.5);
+    border: 1.5px solid var(--hollow-dim);
   }
   .sdot.good { background: var(--good); border-color: var(--good); }
   .sdot.bad  { background: var(--bad);  border-color: var(--bad); }
   .sdot.live { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3.5px var(--sun); }
+
+  /* the 9th row — one diamond per month, sitting under its own weeks.
+     Square day, circle week, diamond month: each step up its own shape. */
+  .months {
+    display: grid; gap: var(--gap, 5px); justify-content: center;
+    margin-top: calc(var(--gap, 5px) * 2.6);
+  }
+  .mdot {
+    width: calc(var(--dot, 14px) * 0.74); height: calc(var(--dot, 14px) * 0.74);
+    justify-self: center; transform: rotate(45deg);
+    border-radius: 2px; background: transparent;
+    border: 1.5px solid var(--hollow-dim);
+  }
+  .mdot.good { background: var(--good); border-color: var(--good); }
+  .mdot.bad  { background: var(--bad);  border-color: var(--bad); }
+  .mdot.live { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3px var(--sun); }
+
+  /* ---------- expanded: the same field, in numbers ---------- */
+  .expand {
+    display: block; margin: 14px auto 0; padding: 4px 10px;
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-family: "Outfit", sans-serif;
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    opacity: 0.7;
+  }
+  .expand:active { opacity: 1; }
+
+  .ledger { display: none; font-variant-numeric: tabular-nums; }
+  .card.expanded .grid,
+  .card.expanded .months { display: none; }
+  .card.expanded .ledger { display: block; }
+
+  .ledger table { width: 100%; border-collapse: collapse; }
+  .ledger th {
+    font-weight: 500; color: var(--muted); padding: 0 0 6px;
+    font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .ledger th.wk, .ledger th.tot { text-align: right; }
+  .ledger td {
+    padding: 3px 0; text-align: center; font-size: 11.5px;
+    color: var(--hollow); border-top: 1px solid var(--surface-1);
+  }
+  .ledger td.wk {
+    text-align: right; padding-right: 7px;
+    font-size: 10px; color: var(--muted); white-space: nowrap;
+  }
+  .ledger td.tot {
+    text-align: right; padding-left: 7px; font-size: 11.5px;
+    font-weight: 500; color: var(--muted);
+  }
+  .ledger td.spent { color: var(--cream); cursor: pointer; }
+  .ledger td.good  { color: var(--good); }
+  .ledger td.bad   { color: var(--bad); }
+  .ledger td.now   { box-shadow: inset 0 0 0 1.5px var(--sun); border-radius: 5px; }
+
+  .ledger th.wk, .ledger td.wk   { width: 34px; }
+  .ledger th.tot, .ledger td.tot { width: 46px; }
+
+  .mlist { margin-top: 16px; }
+  .mlist h4 {
+    margin: 0 0 2px; font-weight: 500; color: var(--muted);
+    font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .mline {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 6px 0; border-top: 1px solid var(--surface-1);
+    font-size: 12px; color: var(--muted);
+  }
+  .mline .mo { flex: 1; letter-spacing: 0.12em; text-transform: uppercase; font-size: 10px; }
+  .mline b { font-weight: 500; color: var(--cream); }
+  .mline .verdict.good { color: var(--good); }
+  .mline .verdict.bad  { color: var(--bad); }
 
   /* ---------- weekly envelope meter ---------- */
   .week { margin-top: 20px; }
@@ -172,9 +310,15 @@
   .week-label em { font-style: normal; opacity: 0.6; }
   .readout .day.back { color: var(--sun); cursor: pointer; }
   .week-top b { color: var(--cream); font-weight: 500; }
+  .week-bot {
+    margin-top: 7px; font-size: 12px; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .week-bot b { color: var(--cream); font-weight: 500; }
+  .week-bot b.over { color: var(--bad); }
   .week-bar {
     height: 6px; border-radius: 999px; overflow: hidden;
-    background: rgba(255,255,255,0.07);
+    background: var(--surface-1);
   }
   .week-fill {
     height: 100%; width: 0;
@@ -215,17 +359,18 @@
   .goal-chip {
     display: inline-flex; align-items: center; gap: 7px;
     padding: 5px 13px; border-radius: 999px;
-    border: 1px solid var(--edge); background: rgba(255,255,255,0.03);
+    border: 1px solid var(--edge); background: var(--surface-1);
     font-size: 12.5px; color: var(--muted); cursor: pointer;
   }
   .goal-chip b { color: var(--cream); font-weight: 500; }
+  .goal-chip.custom { border-color: var(--sun); color: var(--sun); }
 
   .add {
     display: block; width: 66px; height: 66px; margin: 26px auto 0;
     border-radius: 50%; border: none; cursor: pointer;
     background: linear-gradient(160deg, var(--sun) 0%, var(--clay) 100%);
-    color: #2a1420; font-size: 34px; font-weight: 300; line-height: 1;
-    box-shadow: 0 7px 18px rgba(217,99,63,0.34);
+    color: var(--ink); font-size: 34px; font-weight: 300; line-height: 1;
+    box-shadow: var(--shadow-add);
   }
   .add:active { transform: scale(0.93); }
 
@@ -265,6 +410,16 @@
     font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--muted); vertical-align: middle;
   }
+  /* who logged it — same initial colour on both phones, so a screenshot
+     from either one reads the same way */
+  .entry .who {
+    display: inline-block; width: 18px; height: 18px; margin-right: 7px;
+    border-radius: 50%; border: 1px solid var(--edge);
+    font-size: 9.5px; line-height: 16px; text-align: center;
+    color: var(--muted); vertical-align: middle; flex: none;
+  }
+  .entry .who.d { border-color: var(--sun);  color: var(--sun); }
+  .entry .who.k { border-color: var(--teal); color: var(--teal); }
 
   /* quick-pick category chips in the add sheet */
   .chips { margin-top: 14px; }
@@ -288,20 +443,20 @@
   .seg { display: flex; gap: 7px; margin-top: 12px; }
   .seg button {
     flex: 1; padding: 9px; border-radius: 999px; cursor: pointer;
-    border: 1px solid var(--edge); background: rgba(255,255,255,0.04);
+    border: 1px solid var(--edge); background: var(--surface-1);
     color: var(--muted); font-family: "Outfit", sans-serif; font-size: 13px;
   }
-  .seg button.on { background: var(--sun); border-color: var(--sun); color: #2a1420; font-weight: 500; }
+  .seg button.on { background: var(--sun); border-color: var(--sun); color: var(--ink); font-weight: 500; }
 
   .chips button {
     padding: 7px 12px; border-radius: 999px; cursor: pointer;
-    border: 1px solid var(--edge); background: rgba(255,255,255,0.04);
+    border: 1px solid var(--edge); background: var(--surface-1);
     color: var(--muted); font-family: "Outfit", sans-serif; font-size: 13px;
   }
-  .chips button.on { background: var(--sun); border-color: var(--sun); color: #2a1420; font-weight: 500; }
+  .chips button.on { background: var(--sun); border-color: var(--sun); color: var(--ink); font-weight: 500; }
   .chips button.chip-add  { border-style: dashed; color: var(--sage); }
   .chips button.chip-edit { color: var(--muted); opacity: 0.8; }
-  .chips button.chip-edit.on { background: rgba(255,255,255,0.12); color: var(--cream); }
+  .chips button.chip-edit.on { background: var(--surface-2); color: var(--cream); }
   .chips button.editable {
     border-style: dashed; border-color: var(--muted); color: var(--cream);
   }
@@ -314,6 +469,11 @@
     cursor: pointer;
   }
   .btn-del.show { display: block; }
+
+  .scope-hint {
+    margin-top: 9px; text-align: center; font-size: 12px; color: var(--muted);
+  }
+  .scope-hint b { color: var(--cream); font-weight: 500; }
 
   .modal input.name-field {
     font-size: 16px; text-align: left; padding: 13px 15px; margin-top: 11px;
@@ -352,7 +512,7 @@
 
   /* ---------- modals ---------- */
   .backdrop {
-    position: fixed; inset: 0; background: rgba(14,8,20,0.72);
+    position: fixed; inset: 0; background: var(--scrim);
     backdrop-filter: blur(3px);
     display: none; align-items: center; justify-content: center;
     padding: calc(env(safe-area-inset-top) + 18px) 22px
@@ -368,7 +528,7 @@
     overscroll-behavior: contain;
     background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
     border: 1px solid var(--edge); border-radius: 22px; padding: 24px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    box-shadow: var(--shadow-modal);
   }
   .modal h3 {
     margin: 0 0 5px; font-size: 20px;
@@ -379,7 +539,7 @@
   .modal p { margin: 0 0 16px; font-size: 13px; color: var(--muted); }
   .modal input {
     width: 100%; padding: 15px; border-radius: 14px;
-    background: rgba(0,0,0,0.26); border: 1px solid var(--edge);
+    background: var(--field); border: 1px solid var(--edge);
     color: var(--cream); font-size: 27px; text-align: center;
     font-family: "Outfit", sans-serif; font-variant-numeric: tabular-nums;
   }
@@ -389,8 +549,9 @@
     flex: 1; padding: 13px; border-radius: 14px; border: none;
     font-family: "Outfit", sans-serif; font-size: 15px; font-weight: 500; cursor: pointer;
   }
-  .btn-cancel { background: rgba(255,255,255,0.07); color: var(--cream); }
-  .btn-ok { background: linear-gradient(160deg, var(--sun), var(--clay)); color: #2a1420; font-weight: 600; }
+  .btn-cancel { background: var(--surface-2); color: var(--cream); }
+  .btn-ok { background: linear-gradient(160deg, var(--sun), var(--clay)); color: var(--ink); font-weight: 600; }
+  .btn-alt { background: var(--surface-2); color: var(--cream); }
 </style>
 </head>
 <body>
@@ -400,18 +561,25 @@
   <header>
     <div class="sun-badge"><h1>Daily Dollar</h1></div>
     <div class="subhead"><span class="rule"></span><span id="tagline">Dean, Kyle, Cleo and the Nodomoeter</span><span class="rule"></span></div>
+    <div class="who-seg">
+      <button id="whoD">Dean</button>
+      <button id="whoK">Kyle</button>
+    </div>
   </header>
 
-  <div class="card">
+  <div class="card" id="card">
     <div class="grid" id="grid"></div>
     <div class="grid summary" id="summary"></div>
+    <div class="months" id="months"></div>
+    <div class="ledger" id="ledger"></div>
+    <button class="expand" id="expandBtn">show the numbers</button>
 
     <div class="week">
       <div class="week-top">
         <span class="week-label">This week <em id="resetHint"></em></span>
-        <span><b id="weekLeft">$1,400 left</b> · <span id="weekDays">7 days</span></span>
       </div>
       <div class="week-bar" id="weekBar"><div class="week-fill" id="weekFill"></div></div>
+      <div class="week-bot" id="weekBot"></div>
     </div>
 
     <div class="readout">
@@ -419,7 +587,7 @@
       <div class="amount zero" id="amount">$0</div>
       <div class="target-line" id="targetLine" style="display:none"></div>
       <div class="fixed-line" id="fixedLine" style="display:none"></div>
-      <button class="goal-chip" id="goalChip">daily goal <b id="goalVal">$200</b></button>
+      <button class="goal-chip" id="goalChip"><span id="goalLabel">daily goal</span> <b id="goalVal">$200</b></button>
     </div>
 
     <button class="add" id="addBtn" aria-label="Add spend">+</button>
@@ -471,9 +639,28 @@
     <h3>Daily goal</h3>
     <p>Days at or under this stay green.</p>
     <input type="text" inputmode="decimal" id="goalInput" autocomplete="off">
+    <div class="seg">
+      <button id="goalEvery" class="on">Every week</button>
+      <button id="goalThis">This week</button>
+      <button id="goalNext">Next week</button>
+    </div>
+    <div class="scope-hint" id="goalScopeHint"></div>
+    <button class="btn-del" id="goalClear">Back to the usual goal that week</button>
     <div class="row">
       <button class="btn-cancel" data-close>Cancel</button>
       <button class="btn-ok" id="goalSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="backdrop" id="whoModal">
+  <div class="modal">
+    <h3>Whose phone is this?</h3>
+    <p>Pick once and this phone remembers. Everything logged here gets your
+       name on it, and the colours change so you can tell at a glance.</p>
+    <div class="row">
+      <button class="btn-alt" id="pickD">Dean</button>
+      <button class="btn-alt" id="pickK">Kyle</button>
     </div>
   </div>
 </div>
@@ -499,9 +686,16 @@
     { id: 'd6', name: 'Cleo' }
   ];
 
-  // The `label` column / `categories` / `category_renames` tables may not
-  // exist yet — all are detected on first use so the app works either way.
-  var hasLabel = true, hasCategories = true, hasRenames = true;
+  // Who's phone this is. Browsers can't see a MAC address and an IP moves
+  // around too much to trust, so the phone itself is the identity: pick once,
+  // it sticks, and the whole app changes colour as the reminder.
+  var PEOPLE = { D: 'Dean', K: 'Kyle' };
+
+  // The `label` / `who` columns and the `categories`, `category_renames`,
+  // `week_budgets` tables may not exist yet — all are detected on first use
+  // so the app works either way.
+  var hasLabel = true, hasWho = true;
+  var hasCategories = true, hasRenames = true, hasBudgets = true;
   var editingChips = false;
   var pendingFixed = false;    // is the entry being added a committed cost?
   var newCatFixed  = false;    // which section the category in the modal lands in
@@ -514,11 +708,14 @@
   var online = false;
 
   function loadCache() {
-    try {
-      var r = JSON.parse(localStorage.getItem(CACHE));
-      if (r && Array.isArray(r.entries)) return r;
-    } catch (e) {}
-    return { goal: 200, entries: [], categories: DEFAULT_CATEGORIES.slice() };
+    var r = null;
+    try { r = JSON.parse(localStorage.getItem(CACHE)); } catch (e) {}
+    if (!r || !Array.isArray(r.entries)) {
+      r = { goal: 200, entries: [], categories: DEFAULT_CATEGORIES.slice() };
+    }
+    if (!r.budgets) r.budgets = {};      // week start → that week's daily goal
+    if (!r.who) r.who = '';              // 'D' | 'K' | '' until this phone picks
+    return r;
   }
   function saveCache() { localStorage.setItem(CACHE, JSON.stringify(state)); }
 
@@ -574,6 +771,19 @@
     var s = new Date(day.getFullYear(), day.getMonth(), day.getDate() - off);
     return { start: s, end: new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6) };
   }
+  function weekKey(day) { return keyOf(weekBounds(day).start); }
+
+  // Some weeks are just cheaper — parked up, cooking in the van, not driving.
+  // A week can carry its own daily goal; every other week keeps the standing
+  // one, and overriding a week never touches the weeks around it.
+  function goalFor(day) {
+    var o = state.budgets[weekKey(day)];
+    return (o === undefined || o === null) ? state.goal : Number(o);
+  }
+  function hasOverride(day) {
+    var o = state.budgets[weekKey(day)];
+    return o !== undefined && o !== null;
+  }
 
   // What is (or will be) the target for `day`, given everything logged before
   // it? Works for a future day too — that's the projection you get by tapping
@@ -591,7 +801,8 @@
       var d = new Date(eff.getFullYear(), eff.getMonth(), eff.getDate() + i);
       spentBefore += totalFor(keyOf(d)) || 0;
     }
-    return state.goal + (state.goal * before - spentBefore);
+    var g = goalFor(day);                    // one goal for the whole week
+    return g + (g * before - spentBefore);
   }
 
   // Was this whole week a success? Same question as a day, one level up:
@@ -615,11 +826,39 @@
       var d = new Date(eff.getFullYear(), eff.getMonth(), eff.getDate() + i);
       spent += totalFor(keyOf(d)) || 0;
     }
-    var budget = state.goal * (daysBetween(eff, end) + 1);
+    var budget = goalFor(wkStart) * (daysBetween(eff, end) + 1);
     return {
       state: spent > budget ? 'bad' : 'good',
       live:  end >= today,                       // week still running
       spent: spent, budget: budget
+    };
+  }
+
+  // The same question a third time, a month wide. Budget is summed day by day
+  // rather than multiplied, so a week with its own goal counts at its own rate.
+  function monthStats(y, m) {
+    var today = midnight(new Date());
+    var first = firstLoggedDate();
+    var start = new Date(y, m, 1);
+    var end = new Date(y, m + 1, 0);
+
+    if (!first || start > today || end < first) return { state: 'none' };
+    var eff = first > start ? first : start;
+    if (eff > today) return { state: 'none' };
+
+    var last = end < today ? end : today;
+    var spent = 0, budget = 0;
+    for (var i = 0; i <= daysBetween(eff, end); i++) {
+      var d = new Date(eff.getFullYear(), eff.getMonth(), eff.getDate() + i);
+      budget += goalFor(d);
+      if (d <= last) spent += totalFor(keyOf(d)) || 0;
+    }
+    return {
+      state: spent > budget ? 'bad' : 'good',
+      live:  end >= today && start <= today,
+      spent: spent, budget: budget,
+      label: start.toLocaleDateString(undefined, { month: 'long' }),
+      year:  y
     };
   }
 
@@ -637,12 +876,14 @@
       spentWeek += totalFor(keyOf(d)) || 0;            // live spend only
     }
 
-    var budget = state.goal * (daysBetween(eff, wk.end) + 1);
+    var budget = goalFor(today) * (daysBetween(eff, wk.end) + 1);
+    var daysLeft = daysBetween(today, wk.end) + 1;
     return {
       budget:   budget,
       spent:    spentWeek,
       left:     budget - spentWeek,
-      daysLeft: daysBetween(today, wk.end) + 1,
+      daysLeft: daysLeft,
+      perDay:   (budget - spentWeek) / daysLeft,
       target:   targetFor(today),
       weekEnd:  wk.end
     };
@@ -655,7 +896,9 @@
   }
   function money(n) {
     var s = Math.abs(n).toFixed(2).replace(/\.00$/, '');
-    return (n < 0 ? '−$' : '$') + s;
+    var p = s.split('.');
+    p[0] = p[0].replace(/\B(?=(\d{3})+$)/g, ',');     // $1,050, not $1050
+    return (n < 0 ? '−$' : '$') + p.join('.');
   }
 
   // ---- supabase (plain REST — no SDK) -------------------------------------
@@ -667,27 +910,46 @@
       'Content-Type': 'application/json'
     }, opts.headers || {});
     return fetch(SUPA_URL + '/rest/v1/' + path, opts).then(function (r) {
-      if (!r.ok) throw new Error(r.status + ' ' + path);
+      if (!r.ok) {
+        // carry the status: a 4xx means the schema is missing something, a
+        // dropped connection means nothing about the schema at all
+        var err = new Error(r.status + ' ' + path);
+        err.status = r.status;
+        throw err;
+      }
       return r.status === 204 ? null : r.json();
     });
   }
 
-  function pull() {
-    var cols = hasLabel ? 'id,day,amount,label,fixed' : 'id,day,amount';
-    return Promise.all([
-      api('entries?select=' + cols + '&order=id.asc'),
-      api('settings?select=goal&id=eq.1')
-    ]).then(function (res) {
-      state.entries = res[0].map(function (e) {
-        return { id: e.id, day: e.day, amount: Number(e.amount),
-                 label: e.label || '', fixed: !!e.fixed };
+  function entryCols() {
+    var c = 'id,day,amount';
+    if (hasLabel) c += ',label,fixed';
+    if (hasWho)   c += ',who';
+    return c;
+  }
+
+  function pullEntries() {
+    return api('entries?select=' + entryCols() + '&order=id.asc')
+      .then(function (rows) {
+        state.entries = rows.map(function (e) {
+          return { id: e.id, day: e.day, amount: Number(e.amount),
+                   label: e.label || '', fixed: !!e.fixed, who: e.who || '' };
+        });
+        setOnline(true);
+      })
+      .catch(function (err) {
+        // only a real answer from the server tells us a column is missing;
+        // being offline must never quietly stop us sending those columns
+        if (err.status && hasWho)   { hasWho   = false; return pullEntries(); }
+        if (err.status && hasLabel) { hasLabel = false; return pullEntries(); }
+        setOnline(false);
       });
-      if (res[1] && res[1][0]) state.goal = Number(res[1][0].goal);
-      setOnline(true); saveCache(); render();
-    }).catch(function () {
-      if (hasLabel) { hasLabel = false; return pull(); }   // column not added yet
-      setOnline(false); render();
-    }).then(pullCategories);
+  }
+
+  function pullSettings() {
+    return api('settings?select=goal&id=eq.1')
+      .then(function (rows) { if (rows && rows[0]) state.goal = Number(rows[0].goal); })
+      .catch(function () {});
   }
 
   function pullCategories() {
@@ -697,9 +959,24 @@
         state.categories = rows.map(function (c) {
           return { id: c.id, name: c.name, fixed: !!c.fixed };
         });
-        saveCache(); renderChips();
       })
-      .catch(function () { hasCategories = false; });      // table not created yet
+      .catch(function (err) { if (err.status) hasCategories = false; });
+  }
+
+  function pullBudgets() {
+    if (!hasBudgets) return;
+    return api('week_budgets?select=week_start,goal')
+      .then(function (rows) {
+        var m = {};
+        rows.forEach(function (r) { m[String(r.week_start).slice(0, 10)] = Number(r.goal); });
+        state.budgets = m;
+      })
+      .catch(function (err) { if (err.status) hasBudgets = false; });
+  }
+
+  function pull() {
+    return Promise.all([pullEntries(), pullSettings(), pullCategories(), pullBudgets()])
+      .then(function () { saveCache(); render(); renderChips(); });
   }
 
   function setOnline(v) {
@@ -753,7 +1030,7 @@
       // future days in the current envelope can be tapped for a projection;
       // past the reset the slate is wiped, so there's nothing to project
       if (d > today)          cls += (d <= wkEnd ? ' future soon' : ' future');
-      else if (total !== null) cls += (total > state.goal ? ' bad' : ' good');
+      else if (total !== null) cls += (total > goalFor(d) ? ' bad' : ' good');
       // else: past with nothing logged — stays hollow grey
 
       if (k === tKey)        cls += ' today';
@@ -780,20 +1057,124 @@
       sfrag.appendChild(s);
     }
     sum.appendChild(sfrag);
+
+    buildMonths(start, weeks);
+    buildLedger(start, weeks);
+  }
+
+  // the 9th row: one diamond per month, centred over the weeks it owns. A week
+  // straddling the 1st is filed under the month it started in — that's only
+  // where the diamond sits; the numbers underneath are counted by real days.
+  function buildMonths(start, weeks) {
+    var el = document.getElementById('months');
+    el.innerHTML = '';
+    el.style.gridTemplateColumns = 'repeat(' + weeks + ', var(--dot, 14px))';
+
+    var groups = [];
+    for (var w = 0; w < weeks; w++) {
+      var ws = new Date(start.getFullYear(), start.getMonth(), start.getDate() + w * 7);
+      var g = groups[groups.length - 1];
+      if (g && g.y === ws.getFullYear() && g.m === ws.getMonth()) g.to = w;
+      else groups.push({ y: ws.getFullYear(), m: ws.getMonth(), from: w, to: w });
+    }
+
+    var frag = document.createDocumentFragment();
+    groups.forEach(function (g) {
+      var r = monthStats(g.y, g.m);
+      var d = document.createElement('div');
+      d.className = 'mdot' + (r.state === 'none' ? '' : ' ' + r.state) + (r.live ? ' live' : '');
+      d.style.gridColumn = Math.floor((g.from + g.to) / 2) + 1;   // 1-based
+      d.title = r.state === 'none' ? ''
+        : r.label + ' · ' + money(r.spent) + ' of ' + money(r.budget);
+      frag.appendChild(d);
+    });
+    el.appendChild(frag);
+  }
+
+  // Dots say pass or fail; this says by how much. Same span, same weeks, one
+  // row each, with the month totals underneath.
+  function compact(n) {
+    var a = Math.abs(n);
+    var s = a >= 1000
+      ? (a / 1000).toFixed(a >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k'
+      : String(Math.round(a));
+    return (n < 0 ? '−' : '') + s;
+  }
+
+  function buildLedger(start, weeks) {
+    var el = document.getElementById('ledger');
+    if (!expanded) { el.innerHTML = ''; return; }     // don't build what's hidden
+
+    var today = midnight(new Date());
+    var tKey = todayKey();
+    var h = ['<table><thead><tr><th class="wk"></th>'];
+    for (var i = 0; i < 7; i++) {
+      h.push('<th>' + DAY_NAMES[(WEEK_START + i) % 7].charAt(0) + '</th>');
+    }
+    h.push('<th class="tot">Week</th></tr></thead><tbody>');
+
+    for (var w = weeks - 1; w >= 0; w--) {            // this week at the top
+      var ws = new Date(start.getFullYear(), start.getMonth(), start.getDate() + w * 7);
+      var r = weekSummary(ws);
+      h.push('<tr><td class="wk">' + (ws.getMonth() + 1) + '/' + ws.getDate() + '</td>');
+
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() + i);
+        var k = keyOf(d), t = totalFor(k), cls = '', txt = '';
+        if (d > today) {
+          txt = '';                                   // hasn't happened
+        } else {
+          cls = 'spent';
+          if (t === null) txt = '·';
+          else { txt = compact(t); cls += t > goalFor(d) ? ' bad' : ' good'; }
+        }
+        if (k === tKey) cls += ' now';
+        h.push('<td class="' + cls + '"' +
+               (d <= today ? ' data-key="' + k + '"' : '') + '>' + txt + '</td>');
+      }
+
+      h.push('<td class="tot ' + (r.state === 'none' ? '' : r.state) + '">' +
+             (r.state === 'none' ? '' : compact(r.spent)) + '</td></tr>');
+    }
+    h.push('</tbody></table>');
+
+    // every month the grid touches, newest first
+    var seen = {}, months = [];
+    for (var i = 0; i < weeks * 7; i++) {
+      var d2 = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      var mk = d2.getFullYear() + '-' + d2.getMonth();
+      if (!seen[mk]) { seen[mk] = 1; months.push({ y: d2.getFullYear(), m: d2.getMonth() }); }
+    }
+    months.reverse();
+
+    var lines = months.map(function (o) {
+      var r = monthStats(o.y, o.m);
+      if (r.state === 'none') return '';
+      var verdict = r.live ? 'so far' : (r.state === 'good' ? 'made it' : 'over');
+      return '<div class="mline"><span class="mo">' + r.label + '</span>' +
+             '<span><b>' + money(r.spent) + '</b> of ' + money(r.budget) + '</span>' +
+             '<span class="verdict ' + r.state + '">' + verdict + '</span></div>';
+    }).join('');
+
+    if (lines) h.push('<div class="mlist"><h4>By month</h4>' + lines + '</div>');
+    el.innerHTML = h.join('');
   }
 
   // ---- render ------------------------------------------------------------
   function renderWeek() {
     var w = weekStats();
-    var pct = Math.max(0, Math.min(1, w.spent / w.budget));
+    var pct = w.budget > 0 ? Math.max(0, Math.min(1, w.spent / w.budget)) : 0;
     var over = w.left < 0;
+    var days = w.daysLeft + (w.daysLeft === 1 ? ' day' : ' days');
 
     document.getElementById('weekFill').style.width = (pct * 100) + '%';
     document.getElementById('weekBar').classList.toggle('over', over);
-    document.getElementById('weekLeft').textContent =
-      over ? money(-w.left) + ' over' : money(w.left) + ' left';
-    document.getElementById('weekDays').textContent =
-      w.daysLeft + (w.daysLeft === 1 ? ' day' : ' days');
+    // one sentence, so it wraps instead of colliding on a narrow phone
+    document.getElementById('weekBot').innerHTML =
+      '<b>' + money(w.spent) + '</b> of ' + money(w.budget) + ' spent · ' + (over
+        ? '<b class="over">' + money(-w.left) + ' over</b> with ' + days + ' to go'
+        : '<b>' + money(w.left) + '</b> left for ' + days +
+          ', <b>' + money(w.perDay) + '</b> a day');
     document.getElementById('resetHint').textContent =
       '· resets ' + DAY_NAMES[WEEK_START].slice(0, 3);
 
@@ -812,9 +1193,10 @@
     }
 
     // today's target only makes sense while looking at today
-    if (selected === todayKey() && Math.round(w.target) !== Math.round(state.goal)) {
+    var g = goalFor(midnight(new Date()));
+    if (selected === todayKey() && Math.round(w.target) !== Math.round(g)) {
       line.style.display = '';
-      line.className = 'target-line' + (w.target < state.goal ? ' tight' : ' loose');
+      line.className = 'target-line' + (w.target < g ? ' tight' : ' loose');
       line.textContent = w.target <= 0
         ? 'no room left today'
         : "today's target " + money(w.target);
@@ -845,7 +1227,7 @@
     } else {
       amt.textContent = money(total || 0);
       amt.className = 'amount ' +
-        (total === null ? 'zero' : total > state.goal ? 'over' : 'under');
+        (total === null ? 'zero' : total > goalFor(selectedDate()) ? 'over' : 'under');
     }
 
     document.getElementById('addBtn').disabled = future;
@@ -865,7 +1247,11 @@
     dl.textContent = isToday ? 'Today'
                    : (ahead ? 'Tomorrow' : prettyDate(selected)) + '  ✕';
     dl.className = 'day' + (isToday ? '' : ' back');
-    document.getElementById('goalVal').textContent = money(state.goal);
+
+    var custom = hasOverride(selectedDate());
+    document.getElementById('goalLabel').textContent = custom ? 'this week' : 'daily goal';
+    document.getElementById('goalVal').textContent = money(goalFor(selectedDate()));
+    document.getElementById('goalChip').className = 'goal-chip' + (custom ? ' custom' : '');
     document.getElementById('entriesTitle').textContent = isToday ? 'Today' : prettyDate(selected);
 
     var list = entriesFor(selected);
@@ -884,6 +1270,14 @@
       row.className = 'entry';
 
       if (e.fixed) row.className += ' is-fixed';
+
+      if (e.who && PEOPLE[e.who]) {
+        var w = document.createElement('span');
+        w.className = 'who ' + e.who.toLowerCase();
+        w.textContent = e.who;
+        w.title = PEOPLE[e.who] + ' logged this';
+        row.appendChild(w);
+      }
 
       var name = document.createElement('span');
       name.className = 'name' + (e.label ? '' : ' unnamed');
@@ -911,7 +1305,7 @@
   // ---- mutations (optimistic, then sync) ---------------------------------
   function addEntry(amount, label, fixed) {
     var tmp = { id: 'L' + Date.now() + Math.random(), day: selected,
-                amount: amount, label: label, fixed: !!fixed };
+                amount: amount, label: label, fixed: !!fixed, who: state.who };
     state.entries.push(tmp);
     saveCache(); render();
 
@@ -920,6 +1314,7 @@
       if (label) body.label = label;
       body.fixed = !!fixed;
     }
+    if (hasWho && state.who) body.who = state.who;
 
     api('entries', {
       method: 'POST',
@@ -948,11 +1343,50 @@
       .catch(function () { setOnline(false); });
   }
 
+  function setWeekGoal(day, v) {
+    var wk = weekKey(day);
+    state.budgets[wk] = v; saveCache(); render();
+    if (!hasBudgets) return;
+    api('week_budgets', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ week_start: wk, goal: v })
+    }).then(function () { setOnline(true); })
+      .catch(function (err) { if (err.status) hasBudgets = false; else setOnline(false); });
+  }
+
+  function clearWeekGoal(day) {
+    var wk = weekKey(day);
+    delete state.budgets[wk]; saveCache(); render();
+    if (!hasBudgets) return;
+    api('week_budgets?week_start=eq.' + wk, { method: 'DELETE' })
+      .catch(function () { setOnline(false); });
+  }
+
+  // ---- who's phone this is ------------------------------------------------
+  function applyTheme() {
+    var kyle = state.who === 'K';
+    document.documentElement.classList.toggle('kyle', kyle);
+    document.getElementById('themeMeta').setAttribute('content', kyle ? '#f6ead8' : '#1b1424');
+    document.getElementById('whoD').classList.toggle('on', state.who === 'D');
+    document.getElementById('whoK').classList.toggle('on', state.who === 'K');
+  }
+
+  function setWho(w) {
+    state.who = w; saveCache(); applyTheme(); render();
+  }
+
+  document.getElementById('whoD').onclick = function () { setWho('D'); };
+  document.getElementById('whoK').onclick = function () { setWho('K'); };
+  document.getElementById('pickD').onclick = function () { setWho('D'); close('whoModal'); };
+  document.getElementById('pickK').onclick = function () { setWho('K'); close('whoModal'); };
+
   // ---- modals ------------------------------------------------------------
   function open(id, prefill) {
     var m = document.getElementById(id);
     m.classList.add('open');
     var inp = m.querySelector('input');
+    if (!inp) return;                       // some sheets are buttons only
     inp.value = prefill === undefined ? '' : prefill;
     setTimeout(function () { inp.focus(); inp.select(); }, 60);
   }
@@ -962,6 +1396,8 @@
     b.onclick = function () { b.closest('.backdrop').classList.remove('open'); };
   });
   document.querySelectorAll('.backdrop').forEach(function (bd) {
+    // the who-is-this sheet has to be answered, not tapped away
+    if (bd.id === 'whoModal') return;
     bd.onclick = function (ev) { if (ev.target === bd) bd.classList.remove('open'); };
   });
 
@@ -1189,9 +1625,83 @@
   document.getElementById('catInput').onkeydown = function (e) {
     if (e.key === 'Enter') document.getElementById('catSave').click();
   };
-  function openGoal() { open('goalModal', state.goal); }
+  // The goal sheet sets the standing goal, or gives one week its own rate.
+  // "Next week" is here because the grid stops at the current envelope — the
+  // week you most want to plan for is the one you can't tap yet.
+  var goalScope = 'every';
+  var goalInputEl = document.getElementById('goalInput');
+  var lastPrefill = '';
+
+  function scopeDay(scope) {
+    var day = selectedDate();
+    if (scope === 'next') day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 7);
+    return day;
+  }
+  function short(d) { return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+
+  function syncGoalScope() {
+    ['every', 'this', 'next'].forEach(function (s) {
+      document.getElementById('goal' + s.charAt(0).toUpperCase() + s.slice(1))
+        .classList.toggle('on', goalScope === s);
+    });
+
+    var hint = document.getElementById('goalScopeHint');
+    if (goalScope === 'every') {
+      hint.textContent = 'Every week that hasn’t been given its own rate.';
+      document.getElementById('goalClear').classList.remove('show');
+    } else {
+      var wk = weekBounds(scopeDay(goalScope));
+      hint.innerHTML = '<b>' + short(wk.start) + ' – ' + short(wk.end) + '</b> only';
+      document.getElementById('goalClear').classList.toggle('show', hasOverride(wk.start));
+    }
+
+    // follow the scope with its current number, unless it's been typed over
+    if (goalInputEl.value === lastPrefill) {
+      lastPrefill = String(goalScope === 'every' ? state.goal : goalFor(scopeDay(goalScope)));
+      goalInputEl.value = lastPrefill;
+    }
+  }
+
+  function openGoal() {
+    goalScope = hasOverride(selectedDate()) ? 'this' : 'every';
+    lastPrefill = String(goalScope === 'every' ? state.goal : goalFor(selectedDate()));
+    open('goalModal', lastPrefill);
+    syncGoalScope();
+  }
+  document.getElementById('goalEvery').onclick = function () { goalScope = 'every'; syncGoalScope(); };
+  document.getElementById('goalThis').onclick  = function () { goalScope = 'this';  syncGoalScope(); };
+  document.getElementById('goalNext').onclick  = function () { goalScope = 'next';  syncGoalScope(); };
+  document.getElementById('goalClear').onclick = function () {
+    var day = scopeDay(goalScope);
+    close('goalModal');
+    clearWeekGoal(day);
+  };
   document.getElementById('goalBtn').onclick = openGoal;
   document.getElementById('goalChip').onclick = openGoal;
+
+  // ---- dots or numbers ---------------------------------------------------
+  var VIEW = 'dailyDollar.expanded';
+  var expanded = false;
+  try { expanded = localStorage.getItem(VIEW) === '1'; } catch (e) {}
+
+  function syncExpand() {
+    document.getElementById('card').classList.toggle('expanded', expanded);
+    document.getElementById('expandBtn').textContent =
+      expanded ? 'back to dots' : 'show the numbers';
+  }
+  document.getElementById('expandBtn').onclick = function () {
+    expanded = !expanded;
+    try { localStorage.setItem(VIEW, expanded ? '1' : '0'); } catch (e) {}
+    syncExpand(); render();
+  };
+
+  // a number in the table is the same day as the dot above it
+  document.getElementById('ledger').onclick = function (e) {
+    var td = e.target.closest('td[data-key]');
+    if (!td) return;
+    selected = td.dataset.key;
+    render();
+  };
 
   function commitAdd() {
     var v = parseFloat(document.getElementById('addInput').value);
@@ -1201,9 +1711,17 @@
     if (!isNaN(v) && v !== 0) addEntry(v, label, fx);
   }
   function commitGoal() {
-    var v = parseFloat(document.getElementById('goalInput').value);
+    var v = parseFloat(goalInputEl.value);
+    var scope = goalScope, day = scopeDay(goalScope);
     close('goalModal');
-    if (!isNaN(v) && v > 0) setGoal(v);
+    if (isNaN(v) || v <= 0) return;
+    if (scope === 'every') {
+      // changing the standing goal shouldn't leave this week quietly overridden
+      if (hasOverride(selectedDate())) clearWeekGoal(selectedDate());
+      setGoal(v);
+    } else {
+      setWeekGoal(day, v);
+    }
   }
   document.getElementById('addSave').onclick = commitAdd;
   document.getElementById('goalSave').onclick = commitGoal;
@@ -1288,9 +1806,14 @@
   document.addEventListener('visibilitychange', function () { if (!document.hidden) pull(); });
   setInterval(function () { if (!document.hidden) pull(); }, 20000);
 
+  applyTheme();
+  syncExpand();
   renderChips();
   render();
   pull();
+  // one tap, once per phone — after that it's remembered and the colours say
+  // who you are without you having to check
+  if (!state.who) open('whoModal');
 })();
 </script>
 </body>
