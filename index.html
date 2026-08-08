@@ -21,8 +21,8 @@
 <style>
   /* Two palettes, one for each of us — whoever's phone this is, the whole app
      wears their colors, so you can tell at a glance who you're logging as.
-     Dean is dusk over the canyon; Kyle is the same poster at daybreak.
-     `--cream` is the foreground colour in both (dark ink under Kyle's light). */
+     Kyle is dusk over the canyon; Dean is the same poster at daybreak.
+     `--cream` is the foreground colour in both (dark ink under Dean's light). */
   :root {
     --bg:        #1b1424;
     --bg-2:      #241a30;
@@ -57,7 +57,7 @@
     --shadow-add:   0 7px 18px rgba(217,99,63,0.34);
   }
 
-  html.kyle {
+  html.dean {
     --bg:        #f6ead8;
     --bg-2:      #efe0c9;
     --card:      #fdf7ec;
@@ -131,8 +131,8 @@
       rgba(255,242,225,0.00) 0px, rgba(255,242,225,0.00) 9px,
       rgba(255,242,225,0.22) 9px, rgba(255,242,225,0.22) 12px);
   }
-  /* dusk for Dean, dawn for Kyle — the badge flips with the palette */
-  html.kyle .sun-badge {
+  /* dusk for Kyle, dawn for Dean — the badge flips with the palette */
+  html.dean .sun-badge {
     background: linear-gradient(180deg, var(--rose) 0%, var(--clay) 45%, var(--sun) 100%);
   }
   .sun-badge h1 {
@@ -1365,9 +1365,9 @@
 
   // ---- who's phone this is ------------------------------------------------
   function applyTheme() {
-    var kyle = state.who === 'K';
-    document.documentElement.classList.toggle('kyle', kyle);
-    document.getElementById('themeMeta').setAttribute('content', kyle ? '#f6ead8' : '#1b1424');
+    var light = state.who === 'D';
+    document.documentElement.classList.toggle('dean', light);
+    document.getElementById('themeMeta').setAttribute('content', light ? '#f6ead8' : '#1b1424');
     document.getElementById('whoD').classList.toggle('on', state.who === 'D');
     document.getElementById('whoK').classList.toggle('on', state.who === 'K');
   }
