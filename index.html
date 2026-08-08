@@ -108,17 +108,17 @@
   .wrap {
     max-width: 520px;
     margin: 0 auto;
-    padding-top:    calc(env(safe-area-inset-top) + 18px);
+    padding-top:    calc(env(safe-area-inset-top) + 14px);
     padding-bottom: calc(env(safe-area-inset-bottom) + 32px);
     padding-left:   calc(env(safe-area-inset-left) + 18px);
     padding-right:  calc(env(safe-area-inset-right) + 18px);
   }
 
   /* ---------- header: the sun over the ridge ---------- */
-  header { position: relative; text-align: center; margin-bottom: 20px; }
+  header { position: relative; text-align: center; margin-bottom: 12px; }
 
   .sun-badge {
-    width: 100%; height: 62px; position: relative; overflow: hidden;
+    width: 100%; height: 50px; position: relative; overflow: hidden;
     border-radius: 999px 999px 8px 8px;
     background: linear-gradient(180deg, var(--sun) 0%, var(--clay) 55%, var(--rose) 100%);
     display: flex; align-items: flex-end; justify-content: center;
@@ -137,21 +137,21 @@
   }
   .sun-badge h1 {
     position: relative;
-    margin: 0 0 9px;
+    margin: 0 0 7px;
     font-family: "Fraunces", Georgia, serif;
     font-variation-settings: "SOFT" 50, "WONK" 1, "opsz" 100;
     font-weight: 700;
-    font-size: 27px;
+    font-size: 24px;
     letter-spacing: -0.015em;
     color: var(--ink);
   }
 
   /* ---------- who's logging ---------- */
   .who-seg {
-    display: flex; gap: 8px; justify-content: center; margin-top: 12px;
+    display: flex; gap: 8px; justify-content: center; margin-top: 9px;
   }
   .who-seg button {
-    padding: 6px 18px; border-radius: 999px; cursor: pointer;
+    padding: 5px 15px; border-radius: 999px; cursor: pointer;
     border: 1px solid var(--edge); background: var(--surface-1);
     color: var(--muted); font-family: "Outfit", sans-serif;
     font-size: 11.5px; letter-spacing: 0.16em; text-transform: uppercase;
@@ -163,7 +163,7 @@
 
   .subhead {
     display: flex; align-items: center; justify-content: center; gap: 9px;
-    margin-top: 11px; font-size: 11.5px; letter-spacing: 0.19em;
+    margin-top: 8px; font-size: 11.5px; letter-spacing: 0.19em;
     text-transform: uppercase; color: var(--muted);
   }
   .subhead .rule { flex: 1; height: 1px; background: var(--edge); max-width: 60px; }
@@ -182,21 +182,40 @@
     background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
     border: 1px solid var(--edge);
     border-radius: 22px;
-    padding: 20px 18px 24px;
+    padding: 15px 16px 17px;
     box-shadow: var(--shadow-card);
   }
 
-  /* ---------- the dot field ---------- */
-  .grid {
-    display: grid;
-    grid-auto-flow: column;
-    grid-template-rows: repeat(7, var(--dot, 14px));
-    gap: var(--gap, 5px);
-    justify-content: center;
+  /* ---------- the dot field ----------
+     A row per week, reading like a calendar: payday Wednesday on the left
+     through Tuesday on the right, this week at the bottom. The week's own
+     verdict and the month's sit at the end of each row, so a row reads
+     left to right as the days, then how the week went, then the month. */
+  .field {
+    display: flex; gap: 9px; justify-content: center; align-items: flex-start;
     margin: 2px 0 4px;
   }
+  .days {
+    display: grid;
+    grid-template-columns: repeat(7, var(--cw, 30px));
+    grid-template-rows: var(--hh, 13px);      /* the day letters */
+    grid-auto-rows: var(--ch, 15px);
+    gap: var(--gap, 4px);
+  }
+  .gutter {
+    display: grid;
+    grid-template-columns: var(--gut, 15px);
+    grid-template-rows: var(--hh, 13px);
+    grid-auto-rows: var(--ch, 15px);
+    gap: var(--gap, 4px);
+  }
+  .col-head {
+    align-self: center; text-align: center; line-height: 1;
+    font-size: 8.5px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--muted); opacity: 0.7;
+  }
   .dot {
-    width: var(--dot, 14px); height: var(--dot, 14px);
+    width: var(--cw, 30px); height: var(--ch, 15px);
     border-radius: 4px;
     padding: 0; cursor: pointer;
     background: transparent;
@@ -211,31 +230,23 @@
   .dot.sel    { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3.5px var(--muted); }
   .dot:active { transform: scale(0.86); }
 
-  /* the 8th row — one dot per column, the week as a whole. Round, and set off
-     by a gap, so it reads as a summary rather than an eighth day. */
-  .grid.summary {
-    grid-template-rows: var(--dot, 14px);
-    margin-top: calc(var(--gap, 5px) * 2.4);
-  }
+  /* one circle per row: how that whole week went */
   .sdot {
-    width: var(--dot, 14px); height: var(--dot, 14px);
-    border-radius: 50%;
+    width: var(--gut, 15px); height: var(--ch, 15px);
+    border-radius: 999px;
     background: transparent;
     border: 1.5px solid var(--hollow-dim);
   }
   .sdot.good { background: var(--good); border-color: var(--good); }
   .sdot.bad  { background: var(--bad);  border-color: var(--bad); }
-  .sdot.live { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3.5px var(--sun); }
+  .sdot.live { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3px var(--sun); }
 
-  /* the 9th row — one diamond per month, sitting under its own weeks.
-     Square day, circle week, diamond month: each step up its own shape. */
-  .months {
-    display: grid; gap: var(--gap, 5px); justify-content: center;
-    margin-top: calc(var(--gap, 5px) * 2.6);
-  }
+  /* one diamond per month, level with the middle of the weeks it owns.
+     Bar day, circle week, diamond month: each step up its own shape. */
   .mdot {
-    width: calc(var(--dot, 14px) * 0.74); height: calc(var(--dot, 14px) * 0.74);
-    justify-self: center; transform: rotate(45deg);
+    width: calc(var(--gut, 15px) * 0.78); height: calc(var(--gut, 15px) * 0.78);
+    justify-self: center; align-self: center;
+    transform: rotate(45deg);
     border-radius: 2px; background: transparent;
     border: 1.5px solid var(--hollow-dim);
   }
@@ -245,7 +256,7 @@
 
   /* ---------- expanded: the same field, in numbers ---------- */
   .expand {
-    display: block; margin: 14px auto 0; padding: 4px 10px;
+    display: block; margin: 9px auto 0; padding: 4px 10px;
     background: none; border: none; cursor: pointer;
     color: var(--muted); font-family: "Outfit", sans-serif;
     font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
@@ -254,8 +265,7 @@
   .expand:active { opacity: 1; }
 
   .ledger { display: none; font-variant-numeric: tabular-nums; }
-  .card.expanded .grid,
-  .card.expanded .months { display: none; }
+  .card.expanded .field { display: none; }
   .card.expanded .ledger { display: block; }
 
   .ledger table { width: 100%; border-collapse: collapse; }
@@ -300,7 +310,7 @@
   .mline .verdict.bad  { color: var(--bad); }
 
   /* ---------- weekly envelope meter ---------- */
-  .week { margin-top: 20px; }
+  .week { margin-top: 13px; }
   .week-top {
     display: flex; justify-content: space-between; align-items: baseline;
     font-size: 11.5px; color: var(--muted);
@@ -338,7 +348,7 @@
   .add:disabled { opacity: 0.28; box-shadow: none; cursor: default; }
 
   /* ---------- today readout ---------- */
-  .readout { text-align: center; margin-top: 24px; }
+  .readout { text-align: center; margin-top: 15px; }
   .readout .day {
     font-size: 11.5px; letter-spacing: 0.19em; text-transform: uppercase;
     color: var(--muted);
@@ -347,9 +357,9 @@
     font-family: "Fraunces", Georgia, serif;
     font-variation-settings: "SOFT" 50, "WONK" 1, "opsz" 144;
     font-weight: 600;
-    font-size: 58px; line-height: 1.05;
+    font-size: 50px; line-height: 1.05;
     letter-spacing: -0.035em;
-    margin: 8px 0 6px;
+    margin: 5px 0 4px;
     font-variant-numeric: tabular-nums;
   }
   .amount.under { color: var(--sage); }
@@ -366,16 +376,16 @@
   .goal-chip.custom { border-color: var(--sun); color: var(--sun); }
 
   .add {
-    display: block; width: 66px; height: 66px; margin: 26px auto 0;
+    display: block; width: 56px; height: 56px; margin: 16px auto 0;
     border-radius: 50%; border: none; cursor: pointer;
     background: linear-gradient(160deg, var(--sun) 0%, var(--clay) 100%);
-    color: var(--ink); font-size: 34px; font-weight: 300; line-height: 1;
+    color: var(--ink); font-size: 30px; font-weight: 300; line-height: 1;
     box-shadow: var(--shadow-add);
   }
   .add:active { transform: scale(0.93); }
 
   /* ---------- entries ---------- */
-  .entries { margin-top: 26px; }
+  .entries { margin-top: 18px; }
   .entries h2 {
     font-size: 11.5px; letter-spacing: 0.19em; text-transform: uppercase;
     color: var(--muted); font-weight: 500; margin: 0 0 6px;
@@ -568,9 +578,11 @@
   </header>
 
   <div class="card" id="card">
-    <div class="grid" id="grid"></div>
-    <div class="grid summary" id="summary"></div>
-    <div class="months" id="months"></div>
+    <div class="field">
+      <div class="days" id="grid"></div>
+      <div class="gutter" id="summary"></div>
+      <div class="gutter" id="months"></div>
+    </div>
     <div class="ledger" id="ledger"></div>
     <button class="expand" id="expandBtn">show the numbers</button>
 
@@ -671,7 +683,8 @@
   var SUPA_URL = 'https://sdafxhthxtafqtzaltaf.supabase.co';
   var SUPA_KEY = 'sb_publishable_R90eTho_4YY01IR0xApDnQ_Id_ujq95';
   var CACHE = 'dailyDollar.cache';
-  var MAX_WEEKS = 30, MIN_WEEKS = 10;
+  // how far the dot field reaches back (rows), and the numbers view (rows)
+  var FIELD_MIN = 8, FIELD_MAX = 14, LEDGER_MAX = 52;
   // Payday is Wednesday, so that's when the envelope resets and where the grid
   // columns break. 0 = Sunday … 3 = Wednesday.
   var WEEK_START = 3;
@@ -988,37 +1001,54 @@
   }
 
   // ---- the dot field -----------------------------------------------------
-  // Columns are weeks, rows are days of the week (Sun at top). The grid always
-  // ends on the current week, and we render only as many weeks as fit — so the
-  // right-hand column is today's week, flush with the card edge. No scrolling.
-  function weeksThatFit() {
+  // A row per week, day columns running Wednesday (payday) to Tuesday, this
+  // week at the bottom. Days are wider than they are tall: that fills the card
+  // across while keeping each week cheap in height, which is what decides how
+  // far back the field can reach. The long history lives in the numbers view.
+  function fieldMetrics() {
     var card = document.querySelector('.card');
-    var inner = card.clientWidth - 36;                // card horizontal padding
-    var dot = 14, gap = 5;
-    var n = Math.floor((inner + gap) / (dot + gap));
-    if (n < MIN_WEEKS) {                              // very narrow: shrink the dots
-      dot = Math.max(9, Math.floor((inner + gap) / MIN_WEEKS) - gap);
-      n = MIN_WEEKS;
-    }
-    document.documentElement.style.setProperty('--dot', dot + 'px');
-    document.documentElement.style.setProperty('--gap', gap + 'px');
-    return Math.min(n, MAX_WEEKS);
+    var inner = card.clientWidth - 36;                 // card horizontal padding
+    var gap = 4, group = 9, gut = 15, ch = 15, hh = 13;
+
+    var cw = Math.floor((inner - (group * 2 + gut * 2 + gap * 6)) / 7);
+    cw = Math.max(16, Math.min(34, cw));
+
+    // as many weeks as sit comfortably in the top third of the screen
+    var budget = Math.max(140, Math.min(230, Math.round(window.innerHeight * 0.27)));
+    var weeks = Math.floor((budget + gap) / (ch + gap));
+    weeks = Math.max(FIELD_MIN, Math.min(FIELD_MAX, weeks));
+
+    var s = document.documentElement.style;
+    s.setProperty('--cw', cw + 'px');
+    s.setProperty('--ch', ch + 'px');
+    s.setProperty('--gut', gut + 'px');
+    s.setProperty('--gap', gap + 'px');
+    s.setProperty('--hh', hh + 'px');
+    return weeks;
   }
 
   function buildGrid() {
     var grid = document.getElementById('grid');
-    var weeks = weeksThatFit();
+    var weeks = fieldMetrics();
     grid.innerHTML = '';
 
     var today = new Date(); today.setHours(0, 0, 0, 0);
     var off = (today.getDay() - WEEK_START + 7) % 7;
     var start = new Date(today);
     start.setDate(start.getDate() - off);                  // payday of this week
-    start.setDate(start.getDate() - (weeks - 1) * 7);      // first column
+    start.setDate(start.getDate() - (weeks - 1) * 7);      // first row
 
     var tKey = todayKey();
     var wkEnd = weekBounds(today).end;
     var frag = document.createDocumentFragment();
+
+    // the day letters, so which column is which never has to be worked out
+    for (var h = 0; h < 7; h++) {
+      var lab = document.createElement('div');
+      lab.className = 'col-head';
+      lab.textContent = DAY_NAMES[(WEEK_START + h) % 7].charAt(0);
+      frag.appendChild(lab);
+    }
 
     for (var i = 0; i < weeks * 7; i++) {
       var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
@@ -1043,10 +1073,11 @@
     }
     grid.appendChild(frag);
 
-    // the 8th row: one dot per column, for the week as a whole
+    // one circle per row: the week as a whole
     var sum = document.getElementById('summary');
     sum.innerHTML = '';
     var sfrag = document.createDocumentFragment();
+    sfrag.appendChild(colHead('wk'));
     for (var w = 0; w < weeks; w++) {
       var ws = new Date(start.getFullYear(), start.getMonth(), start.getDate() + w * 7);
       var r = weekSummary(ws);
@@ -1059,16 +1090,22 @@
     sum.appendChild(sfrag);
 
     buildMonths(start, weeks);
-    buildLedger(start, weeks);
+    buildLedger();
   }
 
-  // the 9th row: one diamond per month, centred over the weeks it owns. A week
+  function colHead(text) {
+    var el = document.createElement('div');
+    el.className = 'col-head';
+    el.textContent = text;
+    return el;
+  }
+
+  // one diamond per month, level with the middle of its own weeks. A week
   // straddling the 1st is filed under the month it started in — that's only
-  // where the diamond sits; the numbers underneath are counted by real days.
+  // where the diamond sits; the totals are counted by real calendar days.
   function buildMonths(start, weeks) {
     var el = document.getElementById('months');
     el.innerHTML = '';
-    el.style.gridTemplateColumns = 'repeat(' + weeks + ', var(--dot, 14px))';
 
     var groups = [];
     for (var w = 0; w < weeks; w++) {
@@ -1079,11 +1116,12 @@
     }
 
     var frag = document.createDocumentFragment();
+    frag.appendChild(colHead('mo'));
     groups.forEach(function (g) {
       var r = monthStats(g.y, g.m);
       var d = document.createElement('div');
       d.className = 'mdot' + (r.state === 'none' ? '' : ' ' + r.state) + (r.live ? ' live' : '');
-      d.style.gridColumn = Math.floor((g.from + g.to) / 2) + 1;   // 1-based
+      d.style.gridRow = Math.floor((g.from + g.to) / 2) + 2;   // +1 past the header
       d.title = r.state === 'none' ? ''
         : r.label + ' · ' + money(r.spent) + ' of ' + money(r.budget);
       frag.appendChild(d);
@@ -1101,10 +1139,28 @@
     return (n < 0 ? '−' : '') + s;
   }
 
-  function buildLedger(start, weeks) {
+  // The field above only reaches back as far as the rows fit; this reaches all
+  // the way to the first thing ever logged, and stops there rather than
+  // padding out months of empty rows from before the app existed.
+  function ledgerSpan() {
+    var wkStart = weekBounds(midnight(new Date())).start;
+    var first = firstLoggedDate();
+    var weeks = first
+      ? Math.floor(daysBetween(weekBounds(first).start, wkStart) / 7) + 1
+      : 1;
+    weeks = Math.max(4, Math.min(LEDGER_MAX, weeks));
+    return {
+      weeks: weeks,
+      start: new Date(wkStart.getFullYear(), wkStart.getMonth(),
+                      wkStart.getDate() - (weeks - 1) * 7)
+    };
+  }
+
+  function buildLedger() {
     var el = document.getElementById('ledger');
     if (!expanded) { el.innerHTML = ''; return; }     // don't build what's hidden
 
+    var span = ledgerSpan(), start = span.start, weeks = span.weeks;
     var today = midnight(new Date());
     var tKey = todayKey();
     var h = ['<table><thead><tr><th class="wk"></th>'];
